@@ -15,8 +15,11 @@ include_directories(${MISSION_SOURCE_DIR}/apps/cf/fsw/platform_inc)
 include_directories(${MISSION_SOURCE_DIR}/apps/sch/fsw/platform_inc)
 include_directories(${MISSION_SOURCE_DIR}/apps/hs/fsw/platform_inc)
 include_directories(${MISSION_SOURCE_DIR}/apps/hk/fsw/platform_inc)
+include_directories(${APPLICATION_PLATFORM_INC_LIST})
 
+include_directories(fsw/examples/${TO_TRANSPORT})
 aux_source_directory(fsw/src APP_SRC_FILES)
+aux_source_directory(fsw/examples/${TO_TRANSPORT} APP_SRC_FILES)
 
 # Create the app module
 add_cfe_app(to ${APP_SRC_FILES})

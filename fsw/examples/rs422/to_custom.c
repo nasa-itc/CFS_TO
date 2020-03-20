@@ -42,6 +42,7 @@
 ** Include Files
 */
 #include "cfe.h"
+#include "cfe_msgids.h"
 #include "network_includes.h"
 #include "trans_rs422.h"
 

@@ -9,7 +9,7 @@
 
 # Load to_config_2.tbl
 echo "Step 1: Load the to_config_2.tbl through CFE TBL."
-cmdUtil --port=5010 --endian=LE --pktid=0x1804 --cmdcode=2 --string="64:/cf/apps/to_config_2.tbl"
+cmdUtil --port=5010 --endian=LE --pktid=0x1804 --cmdcode=2 --string="64:/cf/to_config_2.tbl"
 sleep 1
 # Verify the new inactive table
 echo "Step 2: Verify the new table through CFE_TBL."

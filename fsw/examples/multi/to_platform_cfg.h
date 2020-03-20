@@ -42,7 +42,7 @@ extern "C" {
 #define TO_WAKEUP_TIMEOUT     500
 
 #define TO_CONFIG_TABLENAME "to_config"
-#define TO_CONFIG_FILENAME "/cf/apps/to_config.tbl"
+#define TO_CONFIG_FILENAME "/cf/to_config.tbl"
 
 #define TO_GROUP_NUMBER_MASK    0xFF000000
 #define TO_MULTI_GROUP_MASK     0x00FFFFFF
