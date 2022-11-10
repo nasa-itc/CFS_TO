@@ -685,7 +685,7 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
     TO_TableEntry_t         *pEntry=NULL;
     boolean                 bHasCfChnl=FALSE;
     int16                   sCfChnlIdx;
-    uint16                  uiCntSemId; 
+    uint32                  uiCntSemId; 
     OS_count_sem_prop_t     cntSemProp;
 
 #ifdef TO_FRAMING_ENABLED
