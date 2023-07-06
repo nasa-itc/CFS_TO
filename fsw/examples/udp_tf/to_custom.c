@@ -106,15 +106,15 @@ static TO_CustomData_t g_TO_CustomData;
 ** Local Variables
 */
 static uint8           idlePattern[32];
-static CFE_SB_Msg_t   *pIdlePacket = (CFE_SB_Msg_t *) &g_TO_CustomData.idleBuff;
+static CFE_MSG_Message_t   *pIdlePacket = (CFE_MSG_Message_t *) &g_TO_CustomData.idleBuff;
 static const uint16    iCaduSize = TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE; 
 
 /*
 ** Local Function Definitions
 */
-extern void TO_SendDataTypePktCmd(CFE_SB_MsgPtr_t);
-static void TO_CustomSetOcfCmd(CFE_SB_Msg_t *pCmdMsg);
-static int32 TO_CustomProcessPacket(CFE_SB_Msg_t *pMsg, uint16 usRouteId);
+extern void TO_SendDataTypePktCmd(CFE_MSG_Message_t *);
+static void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg);
+static int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId);
 static TO_CustomPChnl_t * TO_CustomGetChnl(uint16 usRouteId);
 static int32 TO_CustomProcessSizeSent(int32, int32, uint16);
 
@@ -190,10 +190,10 @@ end_of_function:
 /******************************************************************************/
 /** \brief Process of custom app commands 
 *******************************************************************************/
-int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
+int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_SB_GetCmdCode(pMsg);
+    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pMsg, CFE_MSG_FcnCode_t *FcnCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:
@@ -215,7 +215,7 @@ int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
 /******************************************************************************/
 /** \brief Process data packet 
 *******************************************************************************/
-int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
+int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
                            uint16 usRouteId)
 {
     return TO_CustomProcessPacket(pMsg, usRouteId);
@@ -234,7 +234,7 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO_CustomFrameStart Error: Invalid Route ID:%u",
                           usRouteId);
         iStatus = TO_ERROR;
@@ -267,7 +267,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO_CustomFrameSend Error: Invalid Route ID:%u",
                           usRouteId);
         iStatus = TO_ERROR;
@@ -330,7 +330,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     {
         TO_DisableRoute(usRouteId);
 
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO_CustomFrameSend Error: Failed input status. "
                           "Disabling route:%u.",
                           usRouteId);
@@ -344,7 +344,7 @@ end_of_function:
 /******************************************************************************/
 /** \brief Process a Packet and add to frame
 *******************************************************************************/
-int32 TO_CustomProcessPacket(CFE_SB_Msg_t *pMsg, uint16 usRouteId)
+int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
 {
     int32 iStatus = TO_SUCCESS;
     TO_CustomPChnl_t *pChnl         = NULL;
@@ -355,7 +355,7 @@ int32 TO_CustomProcessPacket(CFE_SB_Msg_t *pMsg, uint16 usRouteId)
     {
         /* This should never happen since route ID is checked several times 
            before */
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO_CustomProcessPacket Error: Invalid Route ID:%u",
                           usRouteId);
         iStatus = TO_ERROR;
@@ -401,7 +401,7 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, uint16 routeId)
     
     if (iSentSize < 0)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO Output errno %d. Route ID:%u disabled ",
                           errno, routeId);
         TO_DisableRoute(routeId);
@@ -415,7 +415,7 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, uint16 routeId)
            a weird state, where every following TF is corrupted. 
            This condition indicates that throttling is necessary. */
         
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
             "TO sent incomplete message (Insuficient bandwidth likely). " 
             "ROUTE ID:%u, MsgSize:%d, SentSize:%d. Route disabled.", 
             routeId, size, iSentSize);
@@ -434,7 +434,7 @@ void TO_CustomCleanup(void)
 {
     if (g_TO_AppData.usOutputEnabled)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_INFORMATION, 
+        CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
                           "TO - Closing Socket."); 
         IO_TransUdpCloseSocket(&g_TO_CustomData.socket.udp);
     }
@@ -446,7 +446,7 @@ void TO_CustomCleanup(void)
 /******************************************************************************/
 /** \brief Set the OCF trailer with the CLCW - Internal Cmd.
 *******************************************************************************/
-void TO_CustomSetOcfCmd(CFE_SB_Msg_t *pCmdMsg)
+void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     TO_CustomSetOcfCmd_t *cmd = (TO_CustomSetOcfCmd_t *) pCmdMsg;
 
@@ -460,7 +460,7 @@ void TO_CustomSetOcfCmd(CFE_SB_Msg_t *pCmdMsg)
                 break;
 
             default:
-                CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
         }
     } 
@@ -469,7 +469,7 @@ void TO_CustomSetOcfCmd(CFE_SB_Msg_t *pCmdMsg)
 /******************************************************************************/
 /** \brief Enable Output Command Response
 *******************************************************************************/
-int32 TO_CustomEnableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     int32 iStatus = IO_TRANS_UDP_NO_ERROR;
     int32 routeMask = TO_ERROR;
@@ -509,7 +509,7 @@ end_of_function:
 /******************************************************************************/
 /** \brief Disable Output Command Response
 *******************************************************************************/
-int32 TO_CustomDisableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     /* Disable */
     g_TO_AppData.usOutputEnabled = 0;

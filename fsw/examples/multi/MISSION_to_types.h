@@ -45,28 +45,28 @@ extern "C" {
 /* Define enable / disable commands */
 typedef struct
 {
-   uint8	ucCmdHeader[CFE_SB_CMD_HDR_SIZE];
-   char     cDestIp[TO_MAX_IP_STRING_SIZE];   /**< Destination IP   */	
-   uint16   usDestPort;                       /**< Destination PORT */ 
-   int32    iFileDesc;       /**< File Descriptor of Port to use.   */
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
+    char     cDestIp[TO_MAX_IP_STRING_SIZE];   /**< Destination IP   */	
+    uint16   usDestPort;                       /**< Destination PORT */ 
+    int32    iFileDesc;       /**< File Descriptor of Port to use.   */
 } TO_EnableOutputCmd_t;
 
 
 typedef struct
 {
-   uint8	ucCmdHeader[CFE_SB_CMD_HDR_SIZE];
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
 } TO_DisableOutputCmd_t;
 
 
 /*************** Telemetry **************/
 typedef struct
 {
-    uint8   ucTlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t ucTlmHeader;
 } TO_InData_t;
 
 typedef struct
 {
-    uint8   ucTlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t ucTlmHeader;
     uint32  uiCounter;
 } TO_OutData_t;
 

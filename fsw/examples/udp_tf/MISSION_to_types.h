@@ -47,7 +47,7 @@ extern "C" {
 /* Define enable / disable commands */
 typedef struct
 {
-   uint8	ucCmdHeader[CFE_SB_CMD_HDR_SIZE];
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
    char     cDestIp[TO_MAX_IP_STRING_SIZE];   /**< Destination IP   */	
    uint16   usDestPort;                       /**< Destination PORT */ 
 } TO_EnableOutputCmd_t;
@@ -55,13 +55,13 @@ typedef struct
 
 typedef struct
 {
-   uint8	ucCmdHeader[CFE_SB_CMD_HDR_SIZE];
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
 } TO_DisableOutputCmd_t;
 
 
 typedef struct
 {
-    uint8	ucCmdHeader[CFE_SB_CMD_HDR_SIZE];
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
     COP1_Clcw_t     clcw;  /**< COP-1 CLCW Data */
 } TO_CustomSetOcfCmd_t;
 
@@ -69,12 +69,12 @@ typedef struct
 /*************** Telemetry **************/
 typedef struct
 {
-    uint8   ucTlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t ucTlmHeader;
 } TO_InData_t;
 
 typedef struct
 {
-    uint8   ucTlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t ucTlmHeader;
     uint32  uiCounter;
 } TO_OutData_t;
 

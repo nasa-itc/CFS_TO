@@ -39,7 +39,7 @@ typedef struct
 
 
 void Ut_TO_SetReturnCode(uint32 Index, int32 RtnVal, uint32 CallCnt);
-boolean Ut_TO_UseReturnCode(uint32 Index);
+bool Ut_TO_UseReturnCode(uint32 Index);
 
 
 #endif
