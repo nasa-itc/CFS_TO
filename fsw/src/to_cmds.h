@@ -104,7 +104,7 @@ typedef struct
 
 typedef struct
 {
-    uint8              TlmHeader[sizeof(CFE_MSG_TelemetryHeader_t)];
+    CFE_MSG_TelemetryHeader_t TlmHeader;
     uint16             synch;
     
     uint16             bit1:1;

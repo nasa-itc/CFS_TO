@@ -420,14 +420,14 @@ void TO_AddTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
            Those routes will simply be ignored. */
         
         /* Validate MID */
-        if (pCmd->usMsgId == TO_REMOVED_ENTRY || 
-            pCmd->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_REMOVED_ENTRY || 
+            CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_UNUSED_ENTRY)
         {
             g_TO_AppData.HkTlm.usCmdErrCnt++;
             CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Received invalid MSG ID: 0x%04x."
                               " TO_ADD_TBL_ENTRY CMD failed.",
-                              pCmd->usMsgId);
+                              CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
 
@@ -450,7 +450,7 @@ void TO_AddTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
                 g_TO_AppData.HkTlm.usCmdErrCnt++;
                 CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                                   "Pre-existing table entry with MID:0x%04x"
-                                  " TO_ADD_TBL_ENTRY CMD failed.", pCmd->usMsgId);
+                                  " TO_ADD_TBL_ENTRY CMD failed.", CFE_SB_MsgIdToValue(pCmd->usMsgId));
                 goto end_of_command;
             }
             
@@ -466,9 +466,9 @@ void TO_AddTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
             {
                 g_TO_AppData.HkTlm.usCmdErrCnt++;
                 CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
-                                  "TO_ADD_TBL_ENTRY CMD failed.", pCmd->usMsgId);
+                                  "TO_ADD_TBL_ENTRY CMD failed with MID:0x%04x.", CFE_SB_MsgIdToValue(pCmd->usMsgId));
                 /* Reset entry */
-                pEntry->usMsgId         = 0;
+                pEntry->usMsgId         = CFE_SB_INVALID_MSG_ID;
                 pEntry->qos.Priority    = 0;
                 pEntry->qos.Reliability = 0;
                 pEntry->usMsgLimit      = 0;
@@ -486,7 +486,7 @@ void TO_AddTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
                               "Succesfully added TBL entry. "
                               "Index:%d, MsgID:0x%04x, RouteMask:0x%04x, "
                               "usMsgLimit:%d, uiGroupData:0x%08x, initState:%u",
-                              index, pEntry->usMsgId, pEntry->usRouteMask,
+                              index, CFE_SB_MsgIdToValue(pEntry->usMsgId), pEntry->usRouteMask,
                               pEntry->usMsgLimit, pEntry->uiGroupData, 
                               pEntry->usState);
         }
@@ -515,14 +515,14 @@ void TO_RemoveTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
                           TO_REMOVE_TBL_ENTRY_CC);
 
         /* Validate MID */
-        if (pCmd->usMsgId == TO_REMOVED_ENTRY || 
-            pCmd->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_REMOVED_ENTRY || 
+            CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_UNUSED_ENTRY)
         {
             g_TO_AppData.HkTlm.usCmdErrCnt++;
             CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Received invalid MSG ID: 0x%04x."
                               " TO_REMOVE_TBL_ENTRY CMD failed.",
-                              pCmd->usMsgId);
+                              CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
 
@@ -551,12 +551,12 @@ void TO_RemoveTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
         }
 
         /* Set the table entry as removed. */
-        pEntry->usMsgId = TO_REMOVED_ENTRY;
+        pEntry->usMsgId = CFE_SB_ValueToMsgId(TO_REMOVED_ENTRY);
 
         CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                           "Succesfully Removed TBL entry. "
                           "Index:%d, MsgId:0x%04x",
-                          index, pCmd->usMsgId);
+                          index, CFE_SB_MsgIdToValue(pCmd->usMsgId));
     }
 
 end_of_command:
@@ -581,14 +581,14 @@ void TO_EnableTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
                           TO_ENABLE_TBL_ENTRY_CC);
         
         /* Validate MID */
-        if (pCmd->usMsgId == TO_REMOVED_ENTRY || 
-            pCmd->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_REMOVED_ENTRY || 
+            CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_UNUSED_ENTRY)
         {
             g_TO_AppData.HkTlm.usCmdErrCnt++;
             CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Received invalid MSG ID: 0x%04x."
                               " TO_ENABLE_TBL_ENTRY CMD failed.",
-                              pCmd->usMsgId);
+                              CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
         
@@ -611,7 +611,7 @@ void TO_EnableTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
             CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                               "Table Entry idx:%u for MID:0x%04x already "
                               "enabled. TO_ENABLE_TBL_ENTRY CMD ignored.",
-                              index, pCmd->usMsgId);
+                              index, CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
         
@@ -619,7 +619,7 @@ void TO_EnableTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
 
         CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                           "Succesfully Enabled TBL entry:%u, MID:0x%04x",
-                          index, pCmd->usMsgId);
+                          index, CFE_SB_MsgIdToValue(pCmd->usMsgId));
     }
 
 end_of_command:
@@ -644,14 +644,14 @@ void TO_DisableTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
                           TO_DISABLE_TBL_ENTRY_CC);
         
         /* Validate MID */
-        if (pCmd->usMsgId == TO_REMOVED_ENTRY || 
-            pCmd->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_REMOVED_ENTRY || 
+            CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_UNUSED_ENTRY)
         {
             g_TO_AppData.HkTlm.usCmdErrCnt++;
             CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Received invalid MSG ID: 0x%04x."
                               " TO_DISABLE_TBL_ENTRY CMD failed.",
-                              pCmd->usMsgId);
+                              CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
         
@@ -674,14 +674,14 @@ void TO_DisableTblEntryCmd(CFE_MSG_Message_t * pCmdMsg)
             CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                               "Table Entry idx:%u for MID:0x%04x already "
                               "disabled. TO_DISABLE_TBL_ENTRY CMD ignored.",
-                              index, pCmd->usMsgId);
+                              index, CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
         pEntry->usState = 0;
 
         CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                           "Succesfully Disabled TBL entry:%u, MID:0x%04x",
-                          index, pCmd->usMsgId);
+                          index, CFE_SB_MsgIdToValue(pCmd->usMsgId));
     }
 
 end_of_command:
@@ -867,14 +867,14 @@ void TO_SetRouteByMidCmd(CFE_MSG_Message_t * pCmdMsg)
            Those routes will simply be ignored. */
         
         /* Validate MID */
-        if (pCmd->usMsgId == TO_REMOVED_ENTRY || 
-            pCmd->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_REMOVED_ENTRY || 
+            CFE_SB_MsgIdToValue(pCmd->usMsgId) == TO_UNUSED_ENTRY)
         {
             g_TO_AppData.HkTlm.usCmdErrCnt++;
             CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Received invalid MSG ID: 0x%04x."
                               " TO_SET_ROUTE_BY_MID CMD failed.",
-                              pCmd->usMsgId);
+                              CFE_SB_MsgIdToValue(pCmd->usMsgId));
             goto end_of_command;
         }
         
@@ -896,7 +896,7 @@ void TO_SetRouteByMidCmd(CFE_MSG_Message_t * pCmdMsg)
         CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                           "Succesfully set usRouteMask=0x%04x for entry:%u, "
                           "MID:0x%04x",
-                          pCmd->usRouteMask, index, pCmd->usMsgId);
+                          pCmd->usRouteMask, index, CFE_SB_MsgIdToValue(pCmd->usMsgId));
     }
 
 end_of_command:
@@ -1202,7 +1202,7 @@ void TO_SendDataTypePktCmd(CFE_MSG_Message_t * pCmdMsg)
     char            string_variable[10] = "ABCDEFGHIJ";
     
     
-    if (TO_VerifyCmdLength(pCmdMsg, sizeof(CFE_SB_CmdHdr_t)))
+    if (TO_VerifyCmdLength(pCmdMsg, sizeof(CFE_MSG_CommandHeader_t)))
     {
         g_TO_AppData.HkTlm.usCmdCnt++;
         CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
@@ -1210,9 +1210,9 @@ void TO_SendDataTypePktCmd(CFE_MSG_Message_t * pCmdMsg)
                           TO_SEND_DATA_TYPE_CC);
 
         /* initialize data types packet */
-        CFE_MSG_Init(&testPacket,
-                       TO_DATA_TYPE_MID,
-                       sizeof(testPacket), true);
+        CFE_MSG_Init(CFE_MSG_PTR(testPacket.TlmHeader),
+                     CFE_SB_ValueToMsgId(TO_DATA_TYPE_MID),
+                     sizeof(testPacket));
 
         CFE_SB_TimeStampMsg((CFE_MSG_Message_t *) &testPacket);
 

@@ -107,7 +107,7 @@ static TO_CustomData_t g_TO_CustomData;
 */
 static uint8           idlePattern[32];
 static CFE_MSG_Message_t   *pIdlePacket = (CFE_MSG_Message_t *) &g_TO_CustomData.idleBuff;
-static const uint16    iCaduSize = TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE; 
+//static const uint16    iCaduSize = TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE; 
 
 /*
 ** Local Function Definitions
@@ -139,8 +139,8 @@ int32 TO_CustomInit(void)
     
     /* Set Critical Message Ids which must always be
      * in config table. */
-    g_TO_AppData.criticalMid[0] = TO_HK_TLM_MID;
-    g_TO_AppData.criticalMid[1] = CI_HK_TLM_MID;
+    g_TO_AppData.criticalMid[0] = CFE_SB_ValueToMsgId(TO_HK_TLM_MID);
+    g_TO_AppData.criticalMid[1] = CFE_SB_ValueToMsgId(CI_HK_TLM_MID);
 
     /* Initialize Idle pattern as pseudo-random sequence. */
     IO_LIB_UTIL_GenPseudoRandomSeq(&idlePattern[0], 0xa9, 0xff);
@@ -150,7 +150,7 @@ int32 TO_CustomInit(void)
                            TO_CUSTOM_TF_IDLE_SIZE, 255);
 
     /* Initialize Master channels */
-    g_TO_CustomData.socket.pc.mc.mcConfig.scId = CFE_SPACECRAFT_ID;
+    g_TO_CustomData.socket.pc.mc.mcConfig.scId = CFE_PLATFORM_TBL_VALID_SCID_1;
     g_TO_CustomData.socket.pc.mc.mcConfig.frameLength = TO_CUSTOM_TF_SIZE;
     g_TO_CustomData.socket.pc.mc.mcConfig.hasErrCtrl = TO_CUSTOM_TF_ERR_CTRL;
     g_TO_CustomData.socket.pc.mc.mcFrameCnt = 0;
@@ -193,7 +193,8 @@ end_of_function:
 int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pMsg, CFE_MSG_FcnCode_t *FcnCode);
+    CFE_MSG_FcnCode_t uiCmdCode = 0;
+    CFE_MSG_GetFcnCode(pMsg, &uiCmdCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:
@@ -305,10 +306,10 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
     
     /* Synchronize frame into CADU */ 
-    iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, TM_SYNC_ASM_STR, 
-                                    TM_SYNC_ASM_SIZE,
-                                    TO_CUSTOM_TF_SIZE, 
-                                    TO_CUSTOM_TF_RANDOMIZE);
+    iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
+                                    (uint8_t) TM_SYNC_ASM_SIZE,
+                                    (uint16_t) TO_CUSTOM_TF_SIZE, 
+                                    (bool) TO_CUSTOM_TF_RANDOMIZE);
     if (iCaduSize < 0)
     {
         iStatus = TO_ERROR;
