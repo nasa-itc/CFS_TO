@@ -103,9 +103,8 @@ int32 TO_CustomInit(void)
        here and update the TO_NUM_CRITICAL_MIDS value. */ 
 
     /* Set Critical Message Ids which must always be in config table. */
-    g_TO_AppData.criticalMid[0] = TO_HK_TLM_MID;
-    g_TO_AppData.criticalMid[1] = CI_HK_TLM_MID;
-    g_TO_AppData.criticalMid[2] = CFE_EVS_EVENT_MSG_MID; 
+    g_TO_AppData.criticalMid[0] = CFE_SB_ValueToMsgId(TO_HK_TLM_MID);
+    g_TO_AppData.criticalMid[1] = CFE_SB_ValueToMsgId(CI_HK_TLM_MID);
     
     /* Route 0: Udp. Linked to CF Channel Index 0. */
     g_TO_AppData.routes[0].usExists = 1;
@@ -121,7 +120,8 @@ end_of_function:
 int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pMsg, CFE_MSG_FcnCode_t *FcnCode);
+    CFE_MSG_FcnCode_t uiCmdCode = 0;
+    CFE_MSG_GetFcnCode(pMsg, &uiCmdCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:

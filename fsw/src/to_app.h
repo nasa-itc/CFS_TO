@@ -92,14 +92,14 @@ extern "C" {
 #endif
 
 #ifndef TO_SCH_PIPE_DEPTH
-#define TO_SCH_PIPE_DEPTH       10
+#define TO_SCH_PIPE_DEPTH       128
 #endif
 
 #ifndef TO_CMD_PIPE_DEPTH  
-#define TO_CMD_PIPE_DEPTH       10
+#define TO_CMD_PIPE_DEPTH       128
 #endif
 #ifndef TO_TLM_PIPE_DEPTH  
-#define TO_TLM_PIPE_DEPTH       10
+#define TO_TLM_PIPE_DEPTH       128
 #endif
 
 #ifndef TO_NUM_CRITICAL_MIDS   
@@ -171,6 +171,7 @@ typedef struct
     CFE_SB_PipeId_t  SchPipeId;                     /**< Schedule Pipe ID     */
     uint16           usSchPipeDepth;                /**< Schedule Pipe depth  */
     char             cSchPipeName[OS_MAX_API_NAME]; /**< Schedule Pipe name   */
+    CFE_MSG_Message_t * SchMsgPtr;                  /**< Schedule Message ptr */
 
     /* CFE command pipe */
     CFE_SB_PipeId_t  CmdPipeId;                     /**< Command Pipe ID      */

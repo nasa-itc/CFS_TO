@@ -88,8 +88,14 @@ typedef struct
 
 typedef struct
 {
+    CFE_MSG_TelemetryHeader_t TlmHeader;
+    uint8 idleBuff[TO_CUSTOM_TF_IDLE_SIZE];
+} TO_CustomIdle_t;
+
+typedef struct
+{
     TO_CustomSocketPChnl_t  socket;
-    uint8                   idleBuff[TO_CUSTOM_TF_IDLE_SIZE];
+    TO_CustomIdle_t         IdlePacket;
 } TO_CustomData_t;
 
 /*
@@ -106,7 +112,7 @@ static TO_CustomData_t g_TO_CustomData;
 ** Local Variables
 */
 static uint8           idlePattern[32];
-static CFE_MSG_Message_t   *pIdlePacket = (CFE_MSG_Message_t *) &g_TO_CustomData.idleBuff;
+static CFE_MSG_Message_t   *pIdlePacket = CFE_MSG_PTR(g_TO_CustomData.IdlePacket.TlmHeader);
 //static const uint16    iCaduSize = TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE; 
 
 /*

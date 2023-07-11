@@ -574,18 +574,17 @@ end_of_function:
 int32 TO_RcvMsg(int32 iBlocking)
 {
     int32           iStatus=CFE_SUCCESS;
-    CFE_MSG_Message_t * pMsg=NULL;
     CFE_SB_MsgId_t  MsgId = CFE_SB_INVALID_MSG_ID;
 
     /* Wait for WakeUp messages from scheduler */
-    iStatus = CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&pMsg,  g_TO_AppData.SchPipeId,  iBlocking);
+    iStatus = CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&g_TO_AppData.SchMsgPtr,  g_TO_AppData.SchPipeId,  iBlocking);
         
     /* Performance Log Entry stamp - #2 */
     CFE_ES_PerfLogEntry(TO_MAIN_TASK_PERF_ID); 
     
     if (iStatus == CFE_SUCCESS)
     {
-        CFE_MSG_GetMsgId(pMsg, &MsgId);
+        CFE_MSG_GetMsgId(g_TO_AppData.SchMsgPtr, &MsgId);
         switch (CFE_SB_MsgIdToValue(MsgId))
         {
             case TO_WAKEUP_MID:
