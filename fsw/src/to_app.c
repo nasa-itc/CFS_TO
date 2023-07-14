@@ -335,8 +335,8 @@ int32  TO_InitTable(void)
     }
 
     /* Make sure the TO_Load Table is accessible */
-    iStatus = CFE_TBL_GetAddress (&pTable, g_TO_AppData.tableHandle);
-    
+    iStatus = CFE_TBL_GetAddress(&pTable, g_TO_AppData.tableHandle);
+
     /* Status should be CFE_TBL_INFO_UPDATED because we loaded it above */
     if (iStatus != CFE_TBL_INFO_UPDATED)
     {
