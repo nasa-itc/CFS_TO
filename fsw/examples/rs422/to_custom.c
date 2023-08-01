@@ -77,7 +77,7 @@ TO_CustomData_t g_TO_CustomData;
 /*
 ** Local Function Definitions
 */
-extern void TO_SendDataTypePktCmd(CFE_SB_MsgPtr_t);
+extern void TO_SendDataTypePktCmd(CFE_MSG_Message_t *);
 
 /*******************************************************************************
 ** Custom Application Functions 
@@ -108,10 +108,10 @@ int32 TO_CustomInit(void)
 /******************************************************************************/
 /** \brief Process of custom app commands 
 *******************************************************************************/
-int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
+int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_SB_GetCmdCode(pMsg);
+    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pMsg, CFE_MSG_FcnCode_t *FcnCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:
@@ -129,7 +129,7 @@ int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
 /******************************************************************************/
 /** \brief Process of output telemetry
 *******************************************************************************/
-int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
+int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
                            uint16 usRouteId)
 {
     int32 iSentSize = 0;
@@ -142,7 +142,7 @@ int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
                                        size);
         if (iSentSize < 0)
         {
-            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                               "TO RS422 sendto errno %d. "
                               "Telemetry output disabled.", errno);
             g_TO_AppData.usOutputEnabled = 0;
@@ -150,7 +150,7 @@ int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
         }
         else if (iSentSize != size)
         {
-            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                               "TO RS422 sent incomplete message.");
             iStatus = TO_ERROR;
         }
@@ -172,7 +172,7 @@ void TO_CustomCleanup(void)
 /******************************************************************************/
 /** \brief Enable Output Command Response
 *******************************************************************************/
-int32 TO_CustomEnableOutputCmd(CFE_SB_Msg_t *cmdpMsg)
+int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *cmdpMsg)
 {
     int32 routeMask = 0x0001;
     
@@ -186,7 +186,7 @@ int32 TO_CustomEnableOutputCmd(CFE_SB_Msg_t *cmdpMsg)
 /******************************************************************************/
 /** \brief Disable Output Command Response
 *******************************************************************************/
-int32 TO_CustomDisableOutputCmd(CFE_SB_Msg_t *cmdpMsg)
+int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *cmdpMsg)
 {
     /* Disable */
     g_TO_AppData.usOutputEnabled = 0;

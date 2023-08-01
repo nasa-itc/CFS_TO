@@ -92,14 +92,14 @@ extern "C" {
 #endif
 
 #ifndef TO_SCH_PIPE_DEPTH
-#define TO_SCH_PIPE_DEPTH       10
+#define TO_SCH_PIPE_DEPTH       128
 #endif
 
 #ifndef TO_CMD_PIPE_DEPTH  
-#define TO_CMD_PIPE_DEPTH       10
+#define TO_CMD_PIPE_DEPTH       128
 #endif
 #ifndef TO_TLM_PIPE_DEPTH  
-#define TO_TLM_PIPE_DEPTH       10
+#define TO_TLM_PIPE_DEPTH       128
 #endif
 
 #ifndef TO_NUM_CRITICAL_MIDS   
@@ -171,6 +171,7 @@ typedef struct
     CFE_SB_PipeId_t  SchPipeId;                     /**< Schedule Pipe ID     */
     uint16           usSchPipeDepth;                /**< Schedule Pipe depth  */
     char             cSchPipeName[OS_MAX_API_NAME]; /**< Schedule Pipe name   */
+    CFE_MSG_Message_t * SchMsgPtr;                  /**< Schedule Message ptr */
 
     /* CFE command pipe */
     CFE_SB_PipeId_t  CmdPipeId;                     /**< Command Pipe ID      */
@@ -426,7 +427,7 @@ int32  TO_ValidateTable(void *);
 *
 *   \returns
 *   \retcode #CFE_SUCCESS \retdesc \copydoc CFE_SUCCESS \endcode
-*   \retstmt Any of the error codes from #CFE_SB_RcvMsg \endstmt
+*   \retstmt Any of the error codes from #CFE_SB_ReceiveBuffer \endstmt
 *
 *   \see 
 *       #TO_AppMain
@@ -541,7 +542,7 @@ void   TO_ProcessNewCmds(void);
 *       #TO_CustomAppCmds
 *       #ALL_TO_CMDS
 *******************************************************************************/
-void   TO_ProcessNewAppCmds(CFE_SB_MsgPtr_t);
+void   TO_ProcessNewAppCmds(CFE_MSG_Message_t *);
 
 /******************************************************************************/
 /** \brief Report Housekeeping Packet
@@ -839,7 +840,7 @@ CFE_SB_MsgId_t TO_GetMessageID(int32 tblIdx);
 *       #ALL_TO_CMDS
 *       #TO_CustomAppCmds
 *******************************************************************************/
-boolean TO_VerifyCmdLength(CFE_SB_MsgPtr_t, uint16);
+bool TO_VerifyCmdLength(CFE_MSG_Message_t *, uint16);
 
 /******************************************************************************/
 /** \brief Subscribe route pipes to all config table messages
@@ -999,7 +1000,7 @@ int32   TO_CustomInit(void);
 *       #TO_VerifyCmdLength
 *       #CFE_SB_GetCmdCode
 *******************************************************************************/
-int32   TO_CustomAppCmds(CFE_SB_MsgPtr_t pCmdMsg);
+int32   TO_CustomAppCmds(CFE_MSG_Message_t * pCmdMsg);
 
 
 /******************************************************************************/
@@ -1098,7 +1099,7 @@ int32   TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus);
 *       #TO_ProcessNewData
 *       #TO_CustomFrameSend
 *******************************************************************************/
-int32   TO_CustomProcessData(CFE_SB_MsgPtr_t pTlmMsg, int32 size, int32 tblIdx,
+int32   TO_CustomProcessData(CFE_MSG_Message_t * pTlmMsg, int32 size, int32 tblIdx,
                              uint16 usRouteId);
 
 /******************************************************************************/
@@ -1153,7 +1154,7 @@ void    TO_CustomCleanup(void);
 *       #TO_ValidateRouteMask
 *       #TO_SetRouteAsConfigured
 *******************************************************************************/
-int32 TO_CustomEnableOutputCmd(CFE_SB_MsgPtr_t pCmdMsg);
+int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t * pCmdMsg);
 
 /******************************************************************************/
 /** \brief Disable Output Command Response
@@ -1189,7 +1190,7 @@ int32 TO_CustomEnableOutputCmd(CFE_SB_MsgPtr_t pCmdMsg);
 *       #TO_CustomEnabledOutputCmd
 *       #TO_SetRouteAsUnconfigured
 *******************************************************************************/
-int32 TO_CustomDisableOutputCmd(CFE_SB_MsgPtr_t);
+int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *);
 
 #ifdef __cplusplus
 }

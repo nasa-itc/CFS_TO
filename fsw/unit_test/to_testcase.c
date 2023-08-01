@@ -50,7 +50,7 @@ TO_ConfigTable_t to_ConfigTable =
 };
 
 
-extern void TO_SendDataTypePktCmd(CFE_SB_MsgPtr_t pMsg);
+extern void TO_SendDataTypePktCmd(CFE_MSG_Message_t * pMsg);
 extern int32 Ut_OS_CountSemGetInfoHook(uint32 sem_id, OS_count_sem_prop_t *count_prop);
 
 /* ---------------------  Begin test cases  --------------------------------- */
@@ -488,7 +488,7 @@ void Test_TO_AppMain_RcvMsgFail(void)
     
     TO_AppMain();
     
-    UtAssert_True(g_TO_AppData.uiRunStatus == CFE_ES_APP_ERROR,
+    UtAssert_True(g_TO_AppData.uiRunStatus == CFE_ES_RunStatus_APP_ERROR,
                   "AppMain - RcvMsg Fail");
 
     /* For code coverage */
@@ -519,14 +519,14 @@ void Test_TO_RcvMsg_BadMsg(void)
 {
     int32 actual;
     int32 expected = CFE_SUCCESS;
-    CFE_SB_Msg_t msg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &msg;
+    CFE_MSG_Message_t msg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &msg;
 
     /* Initialize the Command pipe and subscribe to messages */
     TO_InitPipe();
 
-    CFE_SB_SetMsgId(pMsg, 0);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(msg));         
+    CFE_MSG_SetMsgId(pMsg, 0);
+    CFE_MSG_SetSize(pMsg,  sizeof(msg));         
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.SchPipeId);
 
     actual = TO_RcvMsg(CFE_SB_PEND_FOREVER);
@@ -538,13 +538,13 @@ void Test_TO_RcvMsg_Wakeup(void)
     int32 actual;
     int32 expected = CFE_SUCCESS;
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
 
     /* Initialize the Command pipe and subscribe to messages */
     TO_InitPipe();
 
-    CFE_SB_SetMsgId(pMsg, TO_WAKEUP_MID);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(cmdMsg));         
+    CFE_MSG_SetMsgId(pMsg, TO_WAKEUP_MID);
+    CFE_MSG_SetSize(pMsg,  sizeof(cmdMsg));         
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.SchPipeId);
 
     actual = TO_RcvMsg(CFE_SB_PEND_FOREVER);
@@ -613,7 +613,7 @@ void Test_TO_ProcessNewData_FrameError(void)
 void Test_TO_ProcessNewData_BadMsg(void)
 {
     TO_OutData_t    msg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &msg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &msg;
     
     TO_AppInit();
     g_TO_AppData.usOutputEnabled = 1;
@@ -621,8 +621,8 @@ void Test_TO_ProcessNewData_BadMsg(void)
     g_TO_AppData.routes[0].usIsEnabled = 1;
 
     /* Send a Bad Message */
-    CFE_SB_SetMsgId(pMsg, 0);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(msg));
+    CFE_MSG_SetMsgId(pMsg, 0);
+    CFE_MSG_SetSize(pMsg,  sizeof(msg));
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.tlmPipes[0].cfePipeId);
 
     TO_ProcessNewData(&g_TO_AppData.tlmPipes[0], 0);
@@ -634,7 +634,7 @@ void Test_TO_ProcessNewData_BadMsg(void)
 void Test_TO_ProcessNewData_CustomProcessError(void)
 {
     TO_OutData_t    msg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &msg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &msg;
     
     TO_AppInit();
     g_TO_AppData.usOutputEnabled = 1;
@@ -642,8 +642,8 @@ void Test_TO_ProcessNewData_CustomProcessError(void)
     g_TO_AppData.routes[0].usIsEnabled = 1;
 
     /* Send a Bad Message */
-    CFE_SB_SetMsgId(pMsg, TO_OUT_DATA_MID);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(msg));
+    CFE_MSG_SetMsgId(pMsg, TO_OUT_DATA_MID);
+    CFE_MSG_SetSize(pMsg,  sizeof(msg));
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.tlmPipes[0].cfePipeId);
 
     Ut_TO_SetReturnCode(UT_TO_CUSTOMPROCESSDATA_INDEX, 
@@ -659,7 +659,7 @@ void Test_TO_ProcessNewData_CustomProcessError(void)
 void Test_TO_ProcessNewData(void)
 {
     TO_OutData_t    msg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &msg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &msg;
     
     TO_AppInit();
     g_TO_AppData.usOutputEnabled = 1;
@@ -667,8 +667,8 @@ void Test_TO_ProcessNewData(void)
     g_TO_AppData.routes[0].usIsEnabled = 1;
 
     /* Send a good Message */
-    CFE_SB_SetMsgId(pMsg, TO_OUT_DATA_MID);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(msg));
+    CFE_MSG_SetMsgId(pMsg, TO_OUT_DATA_MID);
+    CFE_MSG_SetSize(pMsg,  sizeof(msg));
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.tlmPipes[0].cfePipeId);
 
     Ut_OSAPI_SetFunctionHook(UT_OSAPI_COUNTSEMGETINFO_INDEX,
@@ -690,14 +690,14 @@ void Test_TO_ProcessNewData(void)
 void Test_TO_ProcessNewCmds_BadMsg(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
 
     /* Initialize the Command pipe and subscribe to messages */
     TO_InitPipe();
 
     /* Send a Bad Command */
-    CFE_SB_SetMsgId(pMsg, 0);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));         
+    CFE_MSG_SetMsgId(pMsg, 0);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));         
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.CmdPipeId);
 
     TO_ProcessNewCmds();
@@ -709,15 +709,15 @@ void Test_TO_ProcessNewCmds_BadMsg(void)
 void Test_TO_ProcessNewCmds_AppCmd(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
 
     /* Initialize the Command pipe and subscribe to messages */
     TO_InitPipe();
 
     /* Send Noop Cmd Command */
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_NOOP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_NOOP_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));                      
 
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.CmdPipeId);
 
@@ -730,13 +730,13 @@ void Test_TO_ProcessNewCmds_AppCmd(void)
 void Test_TO_ProcessNewCmds_SendHk(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
 
     TO_InitData();
     TO_InitPipe();
 
-    CFE_SB_SetMsgId(pMsg, TO_SEND_HK_MID);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));                      
+    CFE_MSG_SetMsgId(pMsg, TO_SEND_HK_MID);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));                      
 
     Ut_CFE_SB_AddMsgToPipe(pMsg, g_TO_AppData.CmdPipeId);
 
@@ -758,11 +758,11 @@ void Test_TO_ProcessNewCmds_SendHk(void)
 void Test_TO_ProcessNewAppCmds_Noop(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_NOOP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_NOOP_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -770,7 +770,7 @@ void Test_TO_ProcessNewAppCmds_Noop(void)
     UtAssert_True(g_TO_AppData.HkTlm.usCmdErrCnt == 1,
                   "ProcessNewAppCmds - NOOP_CC - Invalid Len.");
     
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
     
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -783,11 +783,11 @@ void Test_TO_ProcessNewAppCmds_Noop(void)
 void Test_TO_ProcessNewAppCmds_Reset(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_RESET_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_RESET_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -795,7 +795,7 @@ void Test_TO_ProcessNewAppCmds_Reset(void)
     UtAssert_True(g_TO_AppData.HkTlm.usCmdErrCnt == 1,
                   "ProcessNewAppCmds - RESET_CC - Invalid Len.");
     
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
     
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -808,12 +808,12 @@ void Test_TO_ProcessNewAppCmds_Reset(void)
 void Test_TO_ProcessNewAppCmds_Custom(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
 
     /* Send Noop Cmd Command */
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, 40);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  40);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));                      
     
     Ut_TO_SetReturnCode(UT_TO_CUSTOMAPPCMDS_INDEX,
                         TO_ERROR, 1);
@@ -837,11 +837,11 @@ void Test_TO_ProcessNewAppCmds_Custom(void)
 void Test_TO_EnableOutputCmd_MsgLength(void)
 {
     TO_EnableOutputCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -854,12 +854,12 @@ void Test_TO_EnableOutputCmd_MsgLength(void)
 void Test_TO_EnableOutputCmd(void)
 {
     TO_EnableOutputCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     int32 expected = 1;   
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_EnableOutputCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_EnableOutputCmd_t));
 
     /* Setup */
     Ut_TO_SetReturnCode(UT_TO_CUSTOMENABLEOUTPUTCMD_INDEX, 
@@ -914,11 +914,11 @@ void Test_TO_EnableOutputCmd(void)
 void Test_TO_DisableOutputCmd_MsgLength(void)
 {
     TO_DisableOutputCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -933,11 +933,11 @@ void Test_TO_DisableOutputCmd(void)
 {
     int32 expected = 1;
     TO_DisableOutputCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_DisableOutputCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_DisableOutputCmd_t));
     
     /* Setup */
     Ut_TO_SetReturnCode(UT_TO_CUSTOMDISABLEOUTPUTCMD_INDEX, 
@@ -1002,11 +1002,11 @@ void Test_TO_DisableOutputCmd(void)
 void Test_TO_ActivateRoutesCmd_MsgLength(void)
 {
     TO_RouteMaskArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1019,11 +1019,11 @@ void Test_TO_ActivateRoutesCmd_MsgLength(void)
 void Test_TO_ActivateRoutesCmd(void)
 {
     TO_RouteMaskArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ACTIVATE_ROUTES_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_RouteMaskArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ACTIVATE_ROUTES_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_RouteMaskArgCmd_t));
 
     cmdMsg.usRouteMask = 0x0001;
     
@@ -1065,11 +1065,11 @@ void Test_TO_ActivateRoutesCmd(void)
 void Test_TO_DeactivateRoutesCmd_MsgLength(void)
 {
     TO_RouteMaskArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DEACTIVATE_ROUTES_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DEACTIVATE_ROUTES_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1082,11 +1082,11 @@ void Test_TO_DeactivateRoutesCmd_MsgLength(void)
 void Test_TO_DeactivateRoutesCmd(void)
 {
     TO_RouteMaskArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DEACTIVATE_ROUTES_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_RouteMaskArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DEACTIVATE_ROUTES_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_RouteMaskArgCmd_t));
 
     g_TO_AppData.routes[0].usIsEnabled = 1;
     g_TO_AppData.routes[1].usIsEnabled = 1;
@@ -1111,11 +1111,11 @@ void Test_TO_DeactivateRoutesCmd(void)
 void Test_TO_PauseOutputCmd_MsgLength(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_PAUSE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_PAUSE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1128,11 +1128,11 @@ void Test_TO_PauseOutputCmd_MsgLength(void)
 void Test_TO_PauseOutputCmd(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_PAUSE_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_PAUSE_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
 
     g_TO_AppData.usOutputEnabled = 0;
 
@@ -1161,11 +1161,11 @@ void Test_TO_PauseOutputCmd(void)
 void Test_TO_ResumeOutputCmd_MsgLength(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_RESUME_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_RESUME_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1178,11 +1178,11 @@ void Test_TO_ResumeOutputCmd_MsgLength(void)
 void Test_TO_ResumeOutputCmd(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_RESUME_OUTPUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_RESUME_OUTPUT_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
 
     g_TO_AppData.usOutputEnabled = 0;
 
@@ -1211,11 +1211,11 @@ void Test_TO_ResumeOutputCmd(void)
 void Test_TO_AddTblEntryCmd_MsgLength(void)
 {
     TO_AddTblEntryCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ADD_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ADD_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1229,11 +1229,11 @@ void Test_TO_AddTblEntryCmd(void)
 {
     int32 expected = 1;
     TO_AddTblEntryCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ADD_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_AddTblEntryCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ADD_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_AddTblEntryCmd_t));
 
     cmdMsg.usMsgId = TO_UNUSED_ENTRY;
 
@@ -1298,11 +1298,11 @@ void Test_TO_AddTblEntryCmd(void)
 void Test_TO_RemoveTblEntryCmd_MsgLength(void)
 {
     TO_MidArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_REMOVE_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_REMOVE_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1316,11 +1316,11 @@ void Test_TO_RemoveTblEntryCmd(void)
 {
     int32 expected = 1;
     TO_MidArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_REMOVE_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_MidArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_REMOVE_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_MidArgCmd_t));
 
     cmdMsg.usMsgId = TO_UNUSED_ENTRY;
 
@@ -1370,11 +1370,11 @@ void Test_TO_RemoveTblEntryCmd(void)
 void Test_TO_EnableTblEntryCmd_MsgLength(void)
 {
     TO_MidArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1388,11 +1388,11 @@ void Test_TO_EnableTblEntryCmd(void)
 {
     int32 expected = 1;
     TO_MidArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_MidArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_MidArgCmd_t));
 
     cmdMsg.usMsgId = TO_UNUSED_ENTRY;
 
@@ -1439,11 +1439,11 @@ void Test_TO_EnableTblEntryCmd(void)
 void Test_TO_DisableTblEntryCmd_MsgLength(void)
 {
     TO_MidArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1457,11 +1457,11 @@ void Test_TO_DisableTblEntryCmd(void)
 {
     int32 expected = 1;
     TO_MidArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_TBL_ENTRY_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_MidArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_TBL_ENTRY_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_MidArgCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1507,11 +1507,11 @@ void Test_TO_DisableTblEntryCmd(void)
 void Test_TO_EnableGroupCmd_MsgLength(void)
 {
     TO_GroupArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_GROUP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_GROUP_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1524,11 +1524,11 @@ void Test_TO_EnableGroupCmd(void)
 {
     int32 expected = 1;
     TO_GroupArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_GROUP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_GroupArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_GROUP_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_GroupArgCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1578,11 +1578,11 @@ void Test_TO_EnableGroupCmd(void)
 void Test_TO_DisableGroupCmd_MsgLength(void)
 {
     TO_GroupArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_GROUP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_GROUP_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1595,11 +1595,11 @@ void Test_TO_DisableGroupCmd(void)
 {
     int32 expected = 1;
     TO_GroupArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_GROUP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_GroupArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_GROUP_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_GroupArgCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1648,11 +1648,11 @@ void Test_TO_DisableGroupCmd(void)
 void Test_TO_EnableAllCmd_MsgLength(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_ALL_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_ALL_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1664,11 +1664,11 @@ void Test_TO_EnableAllCmd_MsgLength(void)
 void Test_TO_EnableAllCmd(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_ENABLE_ALL_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_ENABLE_ALL_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1698,11 +1698,11 @@ void Test_TO_EnableAllCmd(void)
 void Test_TO_DisableAllCmd_MsgLength(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_ALL_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_ALL_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1714,11 +1714,11 @@ void Test_TO_DisableAllCmd_MsgLength(void)
 void Test_TO_DisableAllCmd(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_DISABLE_ALL_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_DISABLE_ALL_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1748,11 +1748,11 @@ void Test_TO_DisableAllCmd(void)
 void Test_TO_SetRouteByMidCmd_MsgLength(void)
 {
     TO_SetRouteByMidCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_ROUTE_BY_MID_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_ROUTE_BY_MID_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1765,11 +1765,11 @@ void Test_TO_SetRouteByMidCmd(void)
 {
     int32 expected = 1;
     TO_SetRouteByMidCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_ROUTE_BY_MID_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_SetRouteByMidCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_ROUTE_BY_MID_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_SetRouteByMidCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1809,11 +1809,11 @@ void Test_TO_SetRouteByMidCmd(void)
 void Test_TO_SetRouteByGroupCmd_MsgLength(void)
 {
     TO_SetRouteByGroupCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_ROUTE_BY_GROUP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_ROUTE_BY_GROUP_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1826,11 +1826,11 @@ void Test_TO_SetRouteByGroupCmd(void)
 {
     int32 expected = 1;
     TO_SetRouteByGroupCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_ROUTE_BY_GROUP_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_SetRouteByGroupCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_ROUTE_BY_GROUP_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_SetRouteByGroupCmd_t));
 
     /* Initialize Table */
     TO_InitTable();
@@ -1878,11 +1878,11 @@ void Test_TO_SetRouteByGroupCmd(void)
 void Test_TO_ManageTableCmd_MsgLength(void)
 {
     CFE_TBL_NotifyCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_MANAGE_TABLE_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_MANAGE_TABLE_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1896,11 +1896,11 @@ void Test_TO_ManageTableCmd(void)
 {
     int32 expected = 1;
     CFE_TBL_NotifyCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_MANAGE_TABLE_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(cmdMsg));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_MANAGE_TABLE_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(cmdMsg));
 
     TO_InitTable();
     Ut_CFE_TBL_SetReturnCode(UT_CFE_TBL_RELEASEADDRESS_INDEX, -1, 1);
@@ -1968,11 +1968,11 @@ void Test_TO_ManageTableCmd(void)
 void Test_TO_SetRoutePeriodCmd_MsgLength(void)
 {
     TO_SetRoutePeriodCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_ROUTE_PERIOD_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_ROUTE_PERIOD_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -1985,11 +1985,11 @@ void Test_TO_SetRoutePeriodCmd(void)
 {
     int32 expected = 1;
     TO_SetRoutePeriodCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_ROUTE_PERIOD_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_SetRoutePeriodCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_ROUTE_PERIOD_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_SetRoutePeriodCmd_t));
 
     g_TO_AppData.routes[0].usExists = 0;
     cmdMsg.usRouteMask = 0x0001;
@@ -2035,11 +2035,11 @@ void Test_TO_SetRoutePeriodCmd(void)
 void Test_TO_SetWakeupTimeoutCmd_MsgLength(void)
 {
     TO_SetWakeupTimeoutCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_WAKEUP_TIMEOUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_WAKEUP_TIMEOUT_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_ProcessNewAppCmds(pMsg);
@@ -2052,11 +2052,11 @@ void Test_TO_SetWakeupTimeoutCmd(void)
 {
     int32 expected = 1;
     TO_SetWakeupTimeoutCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SET_WAKEUP_TIMEOUT_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_SetWakeupTimeoutCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SET_WAKEUP_TIMEOUT_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_SetWakeupTimeoutCmd_t));
 
     cmdMsg.uiWakeupTimeout = 0;
 
@@ -2091,11 +2091,11 @@ void Test_TO_SetWakeupTimeoutCmd(void)
 void Test_TO_SendDataTypePktCmd_MsgLength(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SEND_DATA_TYPE_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, 20);                      
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SEND_DATA_TYPE_CC);
+    CFE_MSG_SetSize(pMsg,  20);                      
 
     /* Execute test */
     TO_SendDataTypePktCmd(pMsg);
@@ -2107,11 +2107,11 @@ void Test_TO_SendDataTypePktCmd_MsgLength(void)
 void Test_TO_SendDataTypePktCmd(void)
 {
     TO_NoArgCmd_t cmdMsg;
-    CFE_SB_MsgPtr_t pMsg = (CFE_SB_MsgPtr_t) &cmdMsg;
+    CFE_MSG_Message_t * pMsg = (CFE_MSG_Message_t *) &cmdMsg;
     
-    CFE_SB_SetMsgId(pMsg, TO_APP_CMD_MID);
-    CFE_SB_SetCmdCode(pMsg, TO_SEND_DATA_TYPE_CC);
-    CFE_SB_SetTotalMsgLength(pMsg, sizeof(TO_NoArgCmd_t));
+    CFE_MSG_SetMsgId(pMsg, TO_APP_CMD_MID);
+    CFE_MSG_SetFcnCode(pMsg,  TO_SEND_DATA_TYPE_CC);
+    CFE_MSG_SetSize(pMsg,  sizeof(TO_NoArgCmd_t));
 
     /* Execute test */
     TO_SendDataTypePktCmd(pMsg);
