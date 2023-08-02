@@ -51,6 +51,7 @@
 
 #include "to_app.h"
 #include "ci_msgids.h"
+#include "to_mission_cfg.h"
 
 /*
 ** Local Defines
@@ -168,6 +169,7 @@ int32 TO_CustomInit(void)
     CFE_PSP_MemCpy((void* )&pChnl->mc.vc.vcConfig, (void* )&chnlConfig[0],
                    sizeof(TM_SDLP_ChannelConfig_t));
 
+    OS_printf("%s Init Channel: %d\n", __FILE__, __LINE__);
     if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo,
                             &pChnl->buffer[TM_SYNC_ASM_SIZE],
                             &pChnl->mc.vc.ofBuff[0],
@@ -177,9 +179,10 @@ int32 TO_CustomInit(void)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
+    OS_printf("Init Channel: %d\n", __LINE__);
     /* Route 0: Udp */
     g_TO_AppData.routes[0].usExists = 1;
-
+    OS_printf("Init Channel: %d\n", __LINE__);
     /* Tie route 0 to CF channel 0 */
     g_TO_AppData.routes[0].sCfChnlIdx = 0;
 
@@ -239,7 +242,7 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-
+    OS_printf("%s %d\n", __FILE__, __LINE__);
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
     iStatus = TM_SDLP_StartFrame(pFrameInfo);
