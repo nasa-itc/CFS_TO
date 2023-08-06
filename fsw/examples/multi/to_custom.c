@@ -81,7 +81,7 @@ static TO_CustomData_t g_TO_CustomData;
 /*
 ** Local Function Definitions
 */
-extern void TO_SendDataTypePktCmd(CFE_SB_MsgPtr_t);
+extern void TO_SendDataTypePktCmd(CFE_MSG_Message_t *);
 static int32 TO_CustomProcessSizeSent(int32, int32, int32,uint16);
 
 /*******************************************************************************
@@ -122,10 +122,10 @@ end_of_function:
 /******************************************************************************/
 /** \brief Process of custom app commands 
 *******************************************************************************/
-int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
+int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_SB_GetCmdCode(pMsg);
+    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pMsg, CFE_MSG_FcnCode_t *FcnCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:
@@ -143,7 +143,7 @@ int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
 /******************************************************************************/
 /** \brief Process of output telemetry
 *******************************************************************************/
-int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
+int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
                            uint16 usRouteId)
 {
     int32 iSentSize = 0;
@@ -189,7 +189,7 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, int32 iTblIdx,
     
     if (iSentSize < 0)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO Output errno %d. Route ID:%u disabled ",
                           errno, routeId);
         TO_DisableRoute(routeId);
@@ -198,7 +198,7 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, int32 iTblIdx,
     else if (iSentSize != size)
     {
         CFE_SB_MsgId_t  usMsgId = TO_GetMessageID(iTblIdx);
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
             "TO sent incomplete message (Insuficient bandwidth likely). " 
             "MID:%d, ROUTE ID:%u, MsgSize:%d, SentSize:%d. Route disabled.", 
             usMsgId, routeId, size, iSentSize);
@@ -217,7 +217,7 @@ void TO_CustomCleanup(void)
 {
     if (g_TO_AppData.usOutputEnabled)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_INFORMATION, 
+        CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
                           "TO - Closing Socket."); 
         IO_TransUdpCloseSocket(&g_TO_CustomData.udp);
     }
@@ -228,7 +228,7 @@ void TO_CustomCleanup(void)
 /******************************************************************************/
 /** \brief Enable Output Command Response
 *******************************************************************************/
-int32 TO_CustomEnableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     int32 iStatus = IO_TRANS_UDP_NO_ERROR;
     int32 routeMask = TO_ERROR;
@@ -256,7 +256,7 @@ int32 TO_CustomEnableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
 
     g_TO_CustomData.iFileDesc = pCustomCmd->iFileDesc; 
 
-    CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_INFORMATION, 
+    CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
                       "Serial Output Device File Descriptor Set.");
     
     /* Both routes are now configured */
@@ -273,7 +273,7 @@ end_of_function:
 /******************************************************************************/
 /** \brief Disable Output Command Response
 *******************************************************************************/
-int32 TO_CustomDisableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     /* Disable */
     g_TO_AppData.usOutputEnabled = 0;

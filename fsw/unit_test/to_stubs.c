@@ -21,7 +21,7 @@
 #include "to_cmds.h"
 
 extern TO_AppData_t  g_TO_AppData;
-extern void TO_SendDataTypePktCmd(CFE_SB_MsgPtr_t);
+extern void TO_SendDataTypePktCmd(CFE_MSG_Message_t *);
 int32 Ut_OS_CountSemGetInfoHook(uint32 sem_id, OS_count_sem_prop_t *count_prop);
 
 Ut_TO_ReturnCodeTable_t     Ut_TO_ReturnCodeTable[UT_TO_MAX_INDEX];
@@ -38,15 +38,15 @@ void Ut_TO_SetReturnCode(uint32 Index, int32 RtnVal, uint32 CallCnt)
 }
 
 
-boolean Ut_TO_UseReturnCode(uint32 Index)
+bool Ut_TO_UseReturnCode(uint32 Index)
 {
     if (Ut_TO_ReturnCodeTable[Index].Count > 0) {
         Ut_TO_ReturnCodeTable[Index].Count--;
         if (Ut_TO_ReturnCodeTable[Index].Count == 0)
-            return(TRUE);
+            return(true);
     }
 
-    return(FALSE);
+    return(false);
 }
 
 
@@ -68,9 +68,9 @@ int32 TO_CustomInit(void)
 }
 
 
-int32 TO_CustomAppCmds(CFE_SB_MsgPtr_t pCmdMsg)
+int32 TO_CustomAppCmds(CFE_MSG_Message_t * pCmdMsg)
 {
-    uint32 uiCmdCode = CFE_SB_GetCmdCode(pCmdMsg);
+    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pCmdMsg, CFE_MSG_FcnCode_t *FcnCode);
 
     if (Ut_TO_UseReturnCode(UT_TO_CUSTOMAPPCMDS_INDEX))
         return Ut_TO_ReturnCodeTable[UT_TO_CUSTOMAPPCMDS_INDEX].Value;
@@ -83,7 +83,7 @@ int32 TO_CustomAppCmds(CFE_SB_MsgPtr_t pCmdMsg)
         
         default:
             g_TO_AppData.HkTlm.usCmdCnt++;
-            CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_INFORMATION,
+            CFE_EVS_SendEvent(TO_CMD_INF_EID, CFE_EVS_EventType_INFORMATION,
                               "Received Custom Cmd (%d)",
                               uiCmdCode);
             break;
@@ -94,7 +94,7 @@ int32 TO_CustomAppCmds(CFE_SB_MsgPtr_t pCmdMsg)
 
 
 /* This implementation simply outputs packet to console by default. */
-int32   TO_CustomProcessData(CFE_SB_MsgPtr_t pTlmMsg, int32 size, int32 tblIdx,
+int32   TO_CustomProcessData(CFE_MSG_Message_t * pTlmMsg, int32 size, int32 tblIdx,
                              uint16 usRouteId)
 {
     if (Ut_TO_UseReturnCode(UT_TO_CUSTOMPROCESSDATA_INDEX))
@@ -143,7 +143,7 @@ void TO_CustomCleanup(void)
 }
 
 /* Simple set whichever route is received as configured */
-int32 TO_CustomEnableOutputCmd(CFE_SB_MsgPtr_t pCmdMsg)
+int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t * pCmdMsg)
 {
     TO_EnableOutputCmd_t * pCustomCmd = (TO_EnableOutputCmd_t *) pCmdMsg;
     int32 routeMask = TO_ERROR;
@@ -165,7 +165,7 @@ int32 TO_CustomEnableOutputCmd(CFE_SB_MsgPtr_t pCmdMsg)
     return routeMask;
 }
 
-int32 TO_CustomDisableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     TO_DisableOutputCmd_t *pCmd = (TO_DisableOutputCmd_t *) pCmdMsg;
     

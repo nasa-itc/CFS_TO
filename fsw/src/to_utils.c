@@ -63,8 +63,8 @@ int32 TO_FindEmptyTableIndex(void)
     for (ii = 0; ii < TO_MAX_TBL_ENTRIES; ii++)
     {
         pEntry = &g_TO_AppData.pConfigTable->entries[ii];
-        if (pEntry->usMsgId == TO_UNUSED_ENTRY ||
-            pEntry->usMsgId == TO_REMOVED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY ||
+            CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_REMOVED_ENTRY)
         {
             tableIdx = ii;
             break;
@@ -88,11 +88,11 @@ int32 TO_FindTableIndex(TO_ConfigTable_t *pTable,
     {
         pEntry = &pTable->entries[ii];
         /* If we've reached an unused entry, it doesn't exist. */
-        if (pEntry->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY)
         {
             break;
         }
-        else if (pEntry->usMsgId == usMsgId)
+        else if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == CFE_SB_MsgIdToValue(usMsgId))
         {
             tableIdx = ii;
             break;
@@ -126,7 +126,7 @@ int32 TO_SetStateByGroup(uint32 uiGroupData, uint16 usEnableFlag)
     {
         pEntry = &g_TO_AppData.pConfigTable->entries[ii];
         
-        if (pEntry->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY)
         {
             break;
         }
@@ -180,7 +180,7 @@ int32 TO_SetRouteByGroup(uint32 uiGroupData, uint16 usRouteMask)
         pEntry = &g_TO_AppData.pConfigTable->entries[ii];
         
         /* No more entries. We're done. */
-        if (pEntry->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY)
         {
             break;
         }
@@ -224,7 +224,7 @@ int32 TO_SetAllEntryState(uint16 usEnableFlag)
         pEntry = &g_TO_AppData.pConfigTable->entries[ii];
         
         /* If we hit TO_UNUSED, we are done. */
-        if (pEntry->usMsgId == TO_UNUSED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY)
         {
             break;
         }
@@ -318,7 +318,7 @@ CFE_SB_MsgId_t TO_GetMessageID(int32 tblIdx)
 {
     if (tblIdx >= TO_MAX_TBL_ENTRIES)
     {
-        return 0;
+        return CFE_SB_INVALID_MSG_ID;
     }
     
     return g_TO_AppData.pConfigTable->entries[tblIdx].usMsgId;
@@ -328,29 +328,31 @@ CFE_SB_MsgId_t TO_GetMessageID(int32 tblIdx)
 /******************************************************************************/
 /** \brief Verify the command length against expected length
 *******************************************************************************/
-boolean TO_VerifyCmdLength(CFE_SB_MsgPtr_t pMsg,
+bool TO_VerifyCmdLength(CFE_MSG_Message_t * pMsg,
                            uint16 usExpectedLen)
 {
-    boolean bResult=FALSE;
-    uint16  usMsgLen=0;
+    bool bResult = false;
+    size_t  usMsgLen = 0;
+    CFE_SB_MsgId_t MsgId = CFE_SB_INVALID_MSG_ID;
+    CFE_MSG_FcnCode_t usCmdCode = 0;
 
     if (pMsg != NULL)
     {
-        usMsgLen = CFE_SB_GetTotalMsgLength(pMsg);
+        CFE_MSG_GetSize(pMsg, &usMsgLen);
 
         if (usExpectedLen == usMsgLen)
         {
-            bResult = TRUE;
+            bResult = true;
         }
         else
         {
-            CFE_SB_MsgId_t MsgId = CFE_SB_GetMsgId(pMsg);
-            uint16 usCmdCode = CFE_SB_GetCmdCode(pMsg);
+            CFE_MSG_GetMsgId(pMsg, &MsgId);
+            CFE_MSG_GetFcnCode(pMsg, &usCmdCode);
 
-            CFE_EVS_SendEvent(TO_MSGLEN_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(TO_MSGLEN_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Rcvd invalid msgLen: usMsgId=0x%04X, "
                               "cmdCode=%d, msgLen=%d, expectedLen=%d",
-                              MsgId, usCmdCode, usMsgLen, usExpectedLen);
+                              CFE_SB_MsgIdToValue(MsgId), usCmdCode, usMsgLen, usExpectedLen);
                               
             g_TO_AppData.HkTlm.usCmdErrCnt++;
         }
@@ -379,8 +381,8 @@ int32 TO_SubscribeAllMsgs(void)
             break;
         }
         
-        if (pEntry->usMsgId != TO_UNUSED_ENTRY && 
-            pEntry->usMsgId != TO_REMOVED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) != TO_UNUSED_ENTRY && 
+            CFE_SB_MsgIdToValue(pEntry->usMsgId) != TO_REMOVED_ENTRY)
         {
             iStatus = TO_SubscribeMsg(pEntry);
 
@@ -390,7 +392,7 @@ int32 TO_SubscribeAllMsgs(void)
             }
         }
         /* We've reached the end of used entries. */
-        else if (pEntry->usMsgId == TO_UNUSED_ENTRY)
+        else if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY)
         {
             break;
         }
@@ -430,9 +432,9 @@ int32 TO_SubscribeMsg(TO_TableEntry_t *pEntry)
             if (iStatus != CFE_SUCCESS)
             {
                 g_TO_AppData.HkTlm.usMsgSubErrCnt++;
-                CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                     "TO Pipe:%s failed to subscribe to MID 0x%04x",
-                     pTlmPipe->cTlmPipeName, pEntry->usMsgId);
+                     pTlmPipe->cTlmPipeName, CFE_SB_MsgIdToValue(pEntry->usMsgId));
                 break;
             }
             else
@@ -466,8 +468,8 @@ int32 TO_UnsubscribeAllMsgs(TO_ConfigTable_t *pConfigTable)
     {
         pEntry = &pConfigTable->entries[ii];
         
-        if (pEntry->usMsgId != TO_UNUSED_ENTRY && 
-            pEntry->usMsgId != TO_REMOVED_ENTRY)
+        if (CFE_SB_MsgIdToValue(pEntry->usMsgId) != TO_UNUSED_ENTRY && 
+            CFE_SB_MsgIdToValue(pEntry->usMsgId) != TO_REMOVED_ENTRY)
         {
             iStatus = TO_UnsubscribeMsg(pEntry);
 
@@ -477,7 +479,7 @@ int32 TO_UnsubscribeAllMsgs(TO_ConfigTable_t *pConfigTable)
             }
         }
         /* We've reached the end of used entries. */
-        else if (pEntry->usMsgId == TO_UNUSED_ENTRY)
+        else if (CFE_SB_MsgIdToValue(pEntry->usMsgId) == TO_UNUSED_ENTRY)
         {
             break;
         }
@@ -516,9 +518,9 @@ int32 TO_UnsubscribeMsg(TO_TableEntry_t  *pEntry)
             if (iStatus != CFE_SUCCESS)
             {
                 g_TO_AppData.HkTlm.usMsgSubErrCnt++;
-                CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                     "TO Pipe:%s failed to unsubscribe to MID 0x%04x",
-                     pTlmPipe->cTlmPipeName, pEntry->usMsgId);
+                     pTlmPipe->cTlmPipeName, CFE_SB_MsgIdToValue(pEntry->usMsgId));
                 break;
             }
             else

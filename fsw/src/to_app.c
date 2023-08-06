@@ -87,41 +87,28 @@ TO_AppData_t  g_TO_AppData;
 *******************************************************************************/
 void TO_AppMain(void)
 {
-    int32  iStatus=CFE_SUCCESS;
-    
-    /* Register the Application with Executive Services */
-    iStatus = CFE_ES_RegisterApp();
-    if (iStatus != CFE_SUCCESS)
-    {
-        CFE_ES_WriteToSysLog("TO - Failed to register the app (0x%08X)\n", 
-                             iStatus);
-        goto TO_AppMain_Exit_Tag;
-    }
-
     /* Performance Log Entry stamp - #1 */
     CFE_ES_PerfLogEntry(TO_MAIN_TASK_PERF_ID);
     
     /* Perform Application initializations */
     if (TO_AppInit() != CFE_SUCCESS)
     {
-        g_TO_AppData.uiRunStatus = CFE_ES_APP_ERROR;
+        g_TO_AppData.uiRunStatus = CFE_ES_RunStatus_APP_ERROR;
     }
 
     /* Application Main Loop. Call CFE_ES_RunLoop() to check for changes in the
     ** Application's status. If there is a request to kill this Application, 
     ** it will be passed in through the RunLoop call. */
-    while (CFE_ES_RunLoop(&g_TO_AppData.uiRunStatus) == TRUE)
+    while (CFE_ES_RunLoop(&g_TO_AppData.uiRunStatus) == true)
     {
         /* Performance Log Exit stamp */
         CFE_ES_PerfLogExit(TO_MAIN_TASK_PERF_ID);
-        
-        iStatus = TO_RcvMsg(g_TO_AppData.uiWakeupTimeout); 
+        TO_RcvMsg(g_TO_AppData.uiWakeupTimeout); 
     }
 
     /* Performance Log Exit stamp - #2 */
     CFE_ES_PerfLogExit(TO_MAIN_TASK_PERF_ID);
     
-TO_AppMain_Exit_Tag:
     /* Exit the application */
     CFE_ES_ExitApp(g_TO_AppData.uiRunStatus);
 } 
@@ -136,7 +123,7 @@ int32 TO_AppInit(void)
     /* Start as disabled. */
     g_TO_AppData.usOutputEnabled = 0;
     g_TO_AppData.usOutputActive = 0;
-    g_TO_AppData.uiRunStatus = CFE_ES_APP_RUN;
+    g_TO_AppData.uiRunStatus = CFE_ES_RunStatus_APP_RUN;
 
     /* Init Events */
     if (TO_InitEvent() != CFE_SUCCESS)
@@ -153,7 +140,7 @@ int32 TO_AppInit(void)
     if (TO_CustomInit() != CFE_SUCCESS)
     {
         iStatus = TO_ERROR;
-        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO - Custom Init failed.");
         goto TO_AppInit_Exit_Tag;
     }
@@ -162,7 +149,7 @@ int32 TO_AppInit(void)
     if (TO_InitTable() != CFE_SUCCESS)
     {
         iStatus = TO_ERROR;
-        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO - Table Init failed.");
         goto TO_AppInit_Exit_Tag;
     }
@@ -171,18 +158,18 @@ int32 TO_AppInit(void)
     if (TO_InitPipe() != CFE_SUCCESS)
     {
         iStatus = TO_ERROR;
-        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO - Pipe Init failed.");
         goto TO_AppInit_Exit_Tag;
     }
     
     /* Install the cleanup callback */
-    OS_TaskInstallDeleteHandler((void*)&TO_CleanupCallback);
+    OS_TaskInstallDeleteHandler((osal_task_entry)&TO_CleanupCallback);
 
 TO_AppInit_Exit_Tag:
     if (iStatus == CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(TO_INIT_INF_EID, CFE_EVS_INFORMATION,
+        CFE_EVS_SendEvent(TO_INIT_INF_EID, CFE_EVS_EventType_INFORMATION,
                           "Application initialized");
     }
     else
@@ -212,7 +199,7 @@ int32 TO_InitEvent(void)
 
     /* Register the table with CFE */
     iStatus = CFE_EVS_Register(g_TO_AppData.EventTbl,
-                               TO_EVT_CNT, CFE_EVS_BINARY_FILTER);
+                               TO_EVT_CNT, CFE_EVS_EventFilter_BINARY);
     if (iStatus != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("TO - Failed to register with EVS (0x%08X)\n", 
@@ -238,13 +225,13 @@ int32 TO_InitData(void)
     /* Init output data */
     CFE_PSP_MemSet((void*)&g_TO_AppData.OutData, 0x00, 
                    sizeof(g_TO_AppData.OutData));
-    CFE_SB_InitMsg(&g_TO_AppData.OutData,
-                   TO_OUT_DATA_MID, sizeof(g_TO_AppData.OutData), TRUE);
+    CFE_MSG_Init(CFE_MSG_PTR(g_TO_AppData.OutData.ucTlmHeader),
+                 CFE_SB_ValueToMsgId(TO_OUT_DATA_MID), sizeof(g_TO_AppData.OutData));
 
     /* Init housekeeping packet */
     CFE_PSP_MemSet((void*)&g_TO_AppData.HkTlm, 0x00, sizeof(g_TO_AppData.HkTlm));
-    CFE_SB_InitMsg(&g_TO_AppData.HkTlm,
-                   TO_HK_TLM_MID, sizeof(g_TO_AppData.HkTlm), TRUE);
+    CFE_MSG_Init(CFE_MSG_PTR(g_TO_AppData.HkTlm.ucTlmHeader),
+                 CFE_SB_ValueToMsgId(TO_HK_TLM_MID), sizeof(g_TO_AppData.HkTlm));
 
     /* Init wakeup count */
     g_TO_AppData.uiWakeupTimeout = TO_WAKEUP_TIMEOUT;
@@ -253,7 +240,7 @@ int32 TO_InitData(void)
     /* Init critical MIDs */
     for (ii = 0; ii < TO_NUM_CRITICAL_MIDS; ++ii)
     {
-        g_TO_AppData.criticalMid[ii] = 0;
+        g_TO_AppData.criticalMid[ii] = CFE_SB_INVALID_MSG_ID;
     }
 
     /* Go Over every route */
@@ -316,7 +303,7 @@ int32  TO_InitTable(void)
 
     if (iStatus != CFE_SUCCESS)
     {
-    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
     			"CFE_TBL_Register() returned error 0x%08x.  Aborting table init.",
     			iStatus);
 
@@ -329,7 +316,7 @@ int32  TO_InitTable(void)
 
     if (iStatus != CFE_SUCCESS)
     {
-        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                   "CFE_TBL_Load() returned error 0x%08x.  Aborting table init.",
                   iStatus);
 
@@ -340,7 +327,7 @@ int32  TO_InitTable(void)
     iStatus = CFE_TBL_Manage(g_TO_AppData.tableHandle);
     if (iStatus != CFE_SUCCESS)
     {
-    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
            "CFE_TBL_Manage() returned error 0x%08x.  Aborting table init.",
            iStatus);
 
@@ -348,12 +335,12 @@ int32  TO_InitTable(void)
     }
 
     /* Make sure the TO_Load Table is accessible */
-    iStatus = CFE_TBL_GetAddress (&pTable, g_TO_AppData.tableHandle);
-    
+    iStatus = CFE_TBL_GetAddress(&pTable, g_TO_AppData.tableHandle);
+
     /* Status should be CFE_TBL_INFO_UPDATED because we loaded it above */
     if (iStatus != CFE_TBL_INFO_UPDATED)
     {
-    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
     			"CFE_TBL_GetAddress() returned error 0x%08x. "
                 "Aborting table init.",
     			iStatus);
@@ -366,11 +353,11 @@ int32  TO_InitTable(void)
 
     /* Register to receive TBL manage request commands for table updates. */
     iStatus = CFE_TBL_NotifyByMessage(g_TO_AppData.tableHandle, 
-                                      TO_APP_CMD_MID,
+                                      CFE_SB_ValueToMsgId(TO_APP_CMD_MID),
                                       TO_MANAGE_TABLE_CC, 0);
     if (iStatus != CFE_SUCCESS)
     {
-    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+    	CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
     			"CFE_TBL_NotifyByMessage() returned error 0x%08x. "
                 "Aborting table init.", iStatus);
     }
@@ -402,11 +389,11 @@ int32 TO_InitPipe(void)
                                  g_TO_AppData.cSchPipeName);
     if (iStatus == CFE_SUCCESS)
     {
-        CFE_SB_Subscribe(TO_WAKEUP_MID, g_TO_AppData.SchPipeId);
+        CFE_SB_Subscribe(CFE_SB_ValueToMsgId(TO_WAKEUP_MID), g_TO_AppData.SchPipeId);
     }
     else
     {
-        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Failed to create SCH pipe (Error:0x%08x)", iStatus);
         goto TO_InitPipe_Exit_Tag;
     }
@@ -423,12 +410,12 @@ int32 TO_InitPipe(void)
                                  g_TO_AppData.cCmdPipeName);
     if (iStatus == CFE_SUCCESS)
     {
-        CFE_SB_Subscribe(TO_APP_CMD_MID, g_TO_AppData.CmdPipeId);
-        CFE_SB_Subscribe(TO_SEND_HK_MID, g_TO_AppData.CmdPipeId);
+        CFE_SB_Subscribe(CFE_SB_ValueToMsgId(TO_APP_CMD_MID), g_TO_AppData.CmdPipeId);
+        CFE_SB_Subscribe(CFE_SB_ValueToMsgId(TO_SEND_HK_MID), g_TO_AppData.CmdPipeId);
     }
     else
     {
-        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Failed to create CMD pipe (Error:0x%08x)", iStatus);
         goto TO_InitPipe_Exit_Tag;
     }
@@ -449,7 +436,7 @@ int32 TO_InitPipe(void)
 
             if (iStatus != CFE_SUCCESS)
             {
-                CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                                   "Failed to create TLM pipe:%s, "
                                   "(CFE Error:0x%08x)", 
                                   pTlmPipe->cTlmPipeName, iStatus);
@@ -461,7 +448,7 @@ int32 TO_InitPipe(void)
             {
                 if (pRoute->sCfChnlIdx >= TO_NUM_CF_CHANNELS)
                 {
-                    CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                                   "Route:%u, has invalid sCfChnlIdx of %d."
                                   " Only %u CF channels available. ",
                                   jj, pRoute->sCfChnlIdx, TO_NUM_CF_CHANNELS);
@@ -479,7 +466,7 @@ int32 TO_InitPipe(void)
                                             pTlmPipe->usTlmPipeDepth, 0);
                 if (iStatus != OS_SUCCESS)
                 {
-                    CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(TO_INIT_ERR_EID, CFE_EVS_EventType_ERROR,
                                   "Failed to create counting semaphore "
                                   "for CF channel:%s for route ID:%u. "
                                   "(OSAL Error:%d)",
@@ -518,13 +505,13 @@ int32 TO_ValidateTable(void* table)
         TO_TableEntry_t *entry = &pTable->entries[ii];
 
         /* If the entry is in use */
-        if (entry->usMsgId != TO_UNUSED_ENTRY &&
-            entry->usMsgId != TO_REMOVED_ENTRY)
+        if (CFE_SB_MsgIdToValue(entry->usMsgId) != TO_UNUSED_ENTRY &&
+            CFE_SB_MsgIdToValue(entry->usMsgId) != TO_REMOVED_ENTRY)
         {
             /* After an Unused entry found, there should be no more entries. */
             if (reachedUnused) 
             {
-                CFE_EVS_SendEvent(TO_TBL_ERR_EID, CFE_EVS_ERROR,
+                CFE_EVS_SendEvent(TO_TBL_ERR_EID, CFE_EVS_EventType_ERROR,
                                   "Table Validation failed. "
                                   "Unused Entry before entry index:%d", ii);
                 iStatus = TO_ERROR;
@@ -536,23 +523,23 @@ int32 TO_ValidateTable(void* table)
             {
                 TO_TableEntry_t *entryCmp = &pTable->entries[jj]; 
                 
-                if (entryCmp->usMsgId == TO_UNUSED_ENTRY)
+                if (CFE_SB_MsgIdToValue(entryCmp->usMsgId) == TO_UNUSED_ENTRY)
                 {
                     break;
                 }
-                else if (entryCmp->usMsgId != TO_REMOVED_ENTRY &&               
-                         entry->usMsgId == entryCmp->usMsgId)
+                else if (CFE_SB_MsgIdToValue(entryCmp->usMsgId) != TO_REMOVED_ENTRY &&               
+                         CFE_SB_MsgIdToValue(entry->usMsgId) == CFE_SB_MsgIdToValue(entryCmp->usMsgId))
                 {
-                    CFE_EVS_SendEvent(TO_TBL_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(TO_TBL_ERR_EID, CFE_EVS_EventType_ERROR,
                                        "Table Validation failed. "
-                                       "Duplicate MID:0x%04x", entry->usMsgId);
+                                       "Duplicate MID:0x%04x", CFE_SB_MsgIdToValue(entry->usMsgId));
                     
                     iStatus = TO_ERROR;
                     goto end_of_function;
                 }
             }
         }
-        else if (entry->usMsgId == TO_UNUSED_ENTRY)
+        else if (CFE_SB_MsgIdToValue(entry->usMsgId) == TO_UNUSED_ENTRY)
         {
             reachedUnused = 1;
         }
@@ -563,12 +550,12 @@ int32 TO_ValidateTable(void* table)
     {
         iStatus = TO_FindTableIndex(pTable, g_TO_AppData.criticalMid[ii]);
 
-        if (g_TO_AppData.criticalMid[ii] != 0 && iStatus == TO_NO_MATCH)
+        if (CFE_SB_MsgIdToValue(g_TO_AppData.criticalMid[ii]) != 0 && iStatus == TO_NO_MATCH)
         {
-            CFE_EVS_SendEvent(TO_TBL_ERR_EID, CFE_EVS_ERROR,
+            CFE_EVS_SendEvent(TO_TBL_ERR_EID, CFE_EVS_EventType_ERROR,
                                "Table Validation failed. "
                                "Missing Critical MID:0x%04x", 
-                               g_TO_AppData.criticalMid[ii]);
+                               CFE_SB_MsgIdToValue(g_TO_AppData.criticalMid[ii]));
             
             iStatus = TO_ERROR;
             goto end_of_function;
@@ -587,19 +574,18 @@ end_of_function:
 int32 TO_RcvMsg(int32 iBlocking)
 {
     int32           iStatus=CFE_SUCCESS;
-    CFE_SB_MsgPtr_t pMsg=NULL;
-    CFE_SB_MsgId_t  MsgId;
+    CFE_SB_MsgId_t  MsgId = CFE_SB_INVALID_MSG_ID;
 
     /* Wait for WakeUp messages from scheduler */
-    iStatus = CFE_SB_RcvMsg(&pMsg, g_TO_AppData.SchPipeId, iBlocking);
+    iStatus = CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&g_TO_AppData.SchMsgPtr,  g_TO_AppData.SchPipeId,  iBlocking);
         
     /* Performance Log Entry stamp - #2 */
     CFE_ES_PerfLogEntry(TO_MAIN_TASK_PERF_ID); 
     
     if (iStatus == CFE_SUCCESS)
     {
-        MsgId = CFE_SB_GetMsgId(pMsg);
-        switch (MsgId)
+        CFE_MSG_GetMsgId(g_TO_AppData.SchMsgPtr, &MsgId);
+        switch (CFE_SB_MsgIdToValue(MsgId))
         {
             case TO_WAKEUP_MID:
                 TO_ProcessNewCmds();
@@ -608,8 +594,8 @@ int32 TO_RcvMsg(int32 iBlocking)
                 break;
 
             default:
-                CFE_EVS_SendEvent(TO_MSGID_ERR_EID, CFE_EVS_ERROR,
-                                  "Recvd invalid SCH usMsgId (0x%04X)", MsgId);
+                CFE_EVS_SendEvent(TO_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
+                                  "Recvd invalid SCH usMsgId (0x%04X)", CFE_SB_MsgIdToValue(MsgId));
         }
     }
     /* Implementation may set usWakeupTimeout instead of relying on
@@ -622,10 +608,10 @@ int32 TO_RcvMsg(int32 iBlocking)
     }
     else
     {
-        CFE_EVS_SendEvent(TO_PIPE_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
                          "TO: SB pipe read error (0x%08x), app will exit", 
                          iStatus);
-        g_TO_AppData.uiRunStatus= CFE_ES_APP_ERROR;
+        g_TO_AppData.uiRunStatus= CFE_ES_RunStatus_APP_ERROR;
     }
     
     return (iStatus);
@@ -676,14 +662,14 @@ void TO_ProcessTlmPipes(void)
 *******************************************************************************/
 void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
 {
-    CFE_SB_MsgPtr_t         pTlmMsg=NULL;
-    CFE_SB_MsgId_t          usMsgId = 0;
-    boolean                 bGotNewMsg=TRUE;
-    int32                   size = 0;
+    CFE_MSG_Message_t *         pTlmMsg=NULL;
+    CFE_SB_MsgId_t          usMsgId = CFE_SB_INVALID_MSG_ID;
+    bool                 bGotNewMsg=true;
+    size_t                  size = 0;
     int32                   iStatus = 0;
     int32                   iTblIdx = 0;
     TO_TableEntry_t         *pEntry=NULL;
-    boolean                 bHasCfChnl=FALSE;
+    bool                 bHasCfChnl=false;
     int16                   sCfChnlIdx;
     uint32                  uiCntSemId; 
     OS_count_sem_prop_t     cntSemProp;
@@ -706,26 +692,26 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
     sCfChnlIdx = g_TO_AppData.routes[usRouteId].sCfChnlIdx;
     if (sCfChnlIdx >= 0 && g_TO_AppData.cfChnls[sCfChnlIdx].usIsEnabled)
     {
-        bHasCfChnl = TRUE;
+        bHasCfChnl = true;
         uiCntSemId = g_TO_AppData.cfChnls[sCfChnlIdx].uiCfCntSemId;
     }
 
     while (bGotNewMsg)
     {
-        if (CFE_SB_RcvMsg(&pTlmMsg, pTlmPipe->cfePipeId, CFE_SB_POLL) == 
+        if (CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&pTlmMsg,  pTlmPipe->cfePipeId,  CFE_SB_POLL) == 
             CFE_SUCCESS)
         {
             /* Process if output is enabled and active. Otherwise, drop. */
             if (g_TO_AppData.usOutputEnabled && g_TO_AppData.usOutputActive)
             {
-                usMsgId = CFE_SB_GetMsgId(pTlmMsg);
+                CFE_MSG_GetMsgId(pTlmMsg, &usMsgId);
                 iTblIdx = TO_FindTableIndex(g_TO_AppData.pConfigTable, usMsgId);
 
                 if (iTblIdx == TO_NO_MATCH)
                 {
-                    CFE_EVS_SendEvent(TO_PIPE_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(TO_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
                                       "Received invalid MID on TlmPipe. "
-                                      "MID:0x%04x", usMsgId);
+                                      "MID:0x%04x", CFE_SB_MsgIdToValue(usMsgId));
                 }
                 /* Process message if the table entry is enabled for 
                  * this route. */
@@ -738,10 +724,8 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
                         (pEntry->usRouteMask & (1<<usRouteId)) &&
                         g_TO_AppData.routes[usRouteId].usIsEnabled)
                     {
-                        size = CFE_SB_GetTotalMsgLength(pTlmMsg);
-                        iStatus = TO_CustomProcessData(pTlmMsg, size, iTblIdx, 
-                                                       usRouteId);
-                    
+                        CFE_MSG_GetSize(pTlmMsg, &size);
+                        iStatus = TO_CustomProcessData(pTlmMsg, size, iTblIdx, usRouteId);
                         if (iStatus < 0)
                         {
                             break;
@@ -764,7 +748,7 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
         }
         else
         {
-            bGotNewMsg = FALSE;
+            bGotNewMsg = false;
         }
     }
 
@@ -790,17 +774,17 @@ end_of_function:
 *******************************************************************************/
 void TO_ProcessNewCmds(void)
 {
-    CFE_SB_MsgPtr_t pCmdMsg=NULL;
+    CFE_MSG_Message_t * pCmdMsg=NULL;
     CFE_SB_MsgId_t  usMsgId;
-    boolean         bGotNewMsg=TRUE;
+    bool         bGotNewMsg=true;
 
     while (bGotNewMsg)
     {
-        if (CFE_SB_RcvMsg(&pCmdMsg, g_TO_AppData.CmdPipeId, CFE_SB_POLL) == 
+        if (CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&pCmdMsg,  g_TO_AppData.CmdPipeId,  CFE_SB_POLL) == 
             CFE_SUCCESS)
         {
-            usMsgId = CFE_SB_GetMsgId(pCmdMsg);
-            switch (usMsgId)
+            CFE_MSG_GetMsgId(pCmdMsg, &usMsgId);
+            switch (CFE_SB_MsgIdToValue(usMsgId))
             {
                 case TO_APP_CMD_MID:
                     TO_ProcessNewAppCmds(pCmdMsg);  
@@ -812,15 +796,15 @@ void TO_ProcessNewCmds(void)
 
                 default:
                     g_TO_AppData.HkTlm.usCmdErrCnt++;
-                    CFE_EVS_SendEvent(TO_MSGID_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(TO_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
                                       "Recvd invalid CMD usMsgId (0x%04X)", 
-                                      usMsgId);
+                                      CFE_SB_MsgIdToValue(usMsgId));
                     break;
             }
         }
         else
         {
-            bGotNewMsg = FALSE;
+            bGotNewMsg = false;
         }
     }
 }
@@ -828,14 +812,14 @@ void TO_ProcessNewCmds(void)
 /******************************************************************************/
 /** \brief Process New App Commands
 *******************************************************************************/
-void TO_ProcessNewAppCmds(CFE_SB_MsgPtr_t pMsg)
+void TO_ProcessNewAppCmds(CFE_MSG_Message_t * pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32  uiCmdCode = 0;
+    CFE_MSG_FcnCode_t uiCmdCode = 0;
     
     if (pMsg != NULL)
     {
-        uiCmdCode = CFE_SB_GetCmdCode(pMsg);
+        CFE_MSG_GetFcnCode(pMsg, &uiCmdCode);
         switch (uiCmdCode)
         {
             case TO_NOOP_CC:
@@ -930,7 +914,7 @@ void TO_ProcessNewAppCmds(CFE_SB_MsgPtr_t pMsg)
                 if (iStatus != TO_SUCCESS) 
                 {
                     g_TO_AppData.HkTlm.usCmdErrCnt++;
-                    CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_ERROR,
+                    CFE_EVS_SendEvent(TO_CMD_ERR_EID, CFE_EVS_EventType_ERROR,
                                       "Recvd invalid cmd code (%d)", uiCmdCode);
                 }
                 break;
@@ -943,8 +927,8 @@ void TO_ProcessNewAppCmds(CFE_SB_MsgPtr_t pMsg)
 *******************************************************************************/
 void TO_ReportHousekeeping(void)
 {
-    CFE_SB_TimeStampMsg((CFE_SB_MsgPtr_t)&g_TO_AppData.HkTlm);
-    CFE_SB_SendMsg((CFE_SB_MsgPtr_t)&g_TO_AppData.HkTlm);
+    CFE_SB_TimeStampMsg((CFE_MSG_Message_t *)&g_TO_AppData.HkTlm);
+    CFE_SB_TransmitMsg((CFE_MSG_Message_t *)&g_TO_AppData.HkTlm, true);
 }
     
 /******************************************************************************/
@@ -952,8 +936,8 @@ void TO_ReportHousekeeping(void)
 *******************************************************************************/
 void TO_SendOutData(void)
 {
-    CFE_SB_TimeStampMsg((CFE_SB_MsgPtr_t)&g_TO_AppData.OutData);
-    CFE_SB_SendMsg((CFE_SB_MsgPtr_t)&g_TO_AppData.OutData);
+    CFE_SB_TimeStampMsg((CFE_MSG_Message_t *)&g_TO_AppData.OutData);
+    CFE_SB_TransmitMsg((CFE_MSG_Message_t *)&g_TO_AppData.OutData, true);
 }
 
 /******************************************************************************/

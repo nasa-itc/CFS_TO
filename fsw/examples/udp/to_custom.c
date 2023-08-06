@@ -78,7 +78,7 @@ static TO_CustomData_t g_TO_CustomData;
 /*
 ** Local Function Definitions
 */
-extern void TO_SendDataTypePktCmd(CFE_SB_MsgPtr_t);
+extern void TO_SendDataTypePktCmd(CFE_MSG_Message_t *);
 
 /*******************************************************************************
 ** Custom Application Functions 
@@ -103,9 +103,8 @@ int32 TO_CustomInit(void)
        here and update the TO_NUM_CRITICAL_MIDS value. */ 
 
     /* Set Critical Message Ids which must always be in config table. */
-    g_TO_AppData.criticalMid[0] = TO_HK_TLM_MID;
-    g_TO_AppData.criticalMid[1] = CI_HK_TLM_MID;
-    g_TO_AppData.criticalMid[2] = CFE_EVS_EVENT_MSG_MID; 
+    g_TO_AppData.criticalMid[0] = CFE_SB_ValueToMsgId(TO_HK_TLM_MID);
+    g_TO_AppData.criticalMid[1] = CFE_SB_ValueToMsgId(CI_HK_TLM_MID);
     
     /* Route 0: Udp. Linked to CF Channel Index 0. */
     g_TO_AppData.routes[0].usExists = 1;
@@ -118,10 +117,11 @@ end_of_function:
 /******************************************************************************/
 /** \brief Process of custom app commands 
 *******************************************************************************/
-int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
+int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_SB_GetCmdCode(pMsg);
+    CFE_MSG_FcnCode_t uiCmdCode = 0;
+    CFE_MSG_GetFcnCode(pMsg, &uiCmdCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:
@@ -139,7 +139,7 @@ int32 TO_CustomAppCmds(CFE_SB_Msg_t* pMsg)
 /******************************************************************************/
 /** \brief Process of output telemetry
 *******************************************************************************/
-int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
+int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
                            uint16 usRouteId)
 {
     int32 iStatus = 0;
@@ -153,7 +153,7 @@ int32 TO_CustomProcessData(CFE_SB_Msg_t * pMsg, int32 size, int32 iTblIdx,
 
     if (iStatus < 0)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_ERROR,
+        CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO UDP sendto errno %d. Telemetry output disabled.", 
                           errno);
         g_TO_AppData.usOutputEnabled = 0;
@@ -170,7 +170,7 @@ void TO_CustomCleanup(void)
 {
     if (g_TO_AppData.usOutputEnabled)
     {
-        CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_INFORMATION, 
+        CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
                           "TO - Closing Socket."); 
         IO_TransUdpCloseSocket(&g_TO_CustomData.udp);
     }
@@ -181,7 +181,7 @@ void TO_CustomCleanup(void)
 /******************************************************************************/
 /** \brief Enable Output Command Response
 *******************************************************************************/
-int32 TO_CustomEnableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     int32 iStatus = IO_TRANS_UDP_NO_ERROR;
     int32 routeMask = TO_ERROR;
@@ -219,7 +219,7 @@ end_of_function:
 /******************************************************************************/
 /** \brief Disable Output Command Response
 *******************************************************************************/
-int32 TO_CustomDisableOutputCmd(CFE_SB_Msg_t *pCmdMsg)
+int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     /* Disable */
     g_TO_AppData.usOutputEnabled = 0;

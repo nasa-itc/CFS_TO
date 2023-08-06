@@ -8,11 +8,11 @@
 *
 *   \author Guy de Carufel (Odyssey Space Research), NASA, JSC, ER6
 *
-*   \brief Command and telemetry data strucutres for TO application (UDP)
+*   \brief Command and telemetry data strucutres for TO application (Multi)
 *
 *   \par
 *       This header file contains definitions of command and telemetry data
-*       structures for TO applications for the UDP transport protocol example.
+*       structures for TO applications for the Multi transport protocol example.
 *
 *   \par Limitations, Assumptions, External Events, and Notes:
 *     - Make use of the setup.sh script to move / link this file to the
@@ -21,7 +21,7 @@
 *     - Default HK Telemetry structure is defined in to_hktlm.h
 *
 *   \par Modification History:
-*     - 2015-01-09 | Guy de Carufel | Code Started
+*     - 2015-06-02 | Guy de Carufel | Code Started
 *     - 2015-09-22 | Guy de Carufel | Moved hktlm to to_hktlm.h
 *******************************************************************************/
 #ifndef _MISSION_TO_TYPES_H_
@@ -37,18 +37,19 @@ extern "C" {
 #include "cfe.h"
 #include "../to/fsw/src/to_hktlm.h"
 
+#include "cop1.h"
+
 /*
 ** Defines
 */
 #define TO_MAX_IP_STRING_SIZE 16
 
-
 /* Define enable / disable commands */
 typedef struct
 {
     CFE_MSG_CommandHeader_t	ucCmdHeader;
-   char     cDestIp[TO_MAX_IP_STRING_SIZE];   /* Destination IP */	
-   uint16   usDestPort;                       /* Destination PORT */ 
+   char     cDestIp[TO_MAX_IP_STRING_SIZE];   /**< Destination IP   */	
+   uint16   usDestPort;                       /**< Destination PORT */ 
 } TO_EnableOutputCmd_t;
 
 
@@ -57,6 +58,12 @@ typedef struct
     CFE_MSG_CommandHeader_t	ucCmdHeader;
 } TO_DisableOutputCmd_t;
 
+
+typedef struct
+{
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
+    COP1_Clcw_t     clcw;  /**< COP-1 CLCW Data */
+} TO_CustomSetOcfCmd_t;
 
 
 /*************** Telemetry **************/

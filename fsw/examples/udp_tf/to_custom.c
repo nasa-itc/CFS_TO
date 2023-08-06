@@ -8,12 +8,12 @@
 *  
 *   \author Guy de Carufel (Odyssey Space Research), NASA, JSC, ER6
 *
-*   \brief Function Definitions for Custom Layer of TO Multi Devices with TFs.
+*   \brief Function Definitions for Custom Layer of TO UDP with TFs.
 *
 *   \par
 *     This file defines the functions for a custom implementation of the custom
-*     layer of the TO application with transfer frames sent over multiple
-*     devices (RS422 and UDP) with the Space Data link protocol Transfer frames.
+*     layer of the TO application with transfer frames sent over UDP with the 
+*     Space Data link protocol Transfer frames.
 *
 *   \par API Functions Defined:
 *     - TO_CustomInit() - Initialize the transport protocol
@@ -45,7 +45,6 @@
 #include "network_includes.h"
 #include "io_lib_utils.h"
 #include "trans_udp.h"
-#include "trans_rs422.h"
 #include "tm_sdlp.h"
 #include "tm_sync.h"
 #include "cop1.h"
@@ -89,15 +88,14 @@ typedef struct
 
 typedef struct
 {
-    int32               portFd;
-    TO_CustomPChnl_t    pc;
-} TO_CustomSerialPChnl_t;
+    CFE_MSG_TelemetryHeader_t TlmHeader;
+    uint8 idleBuff[TO_CUSTOM_TF_IDLE_SIZE];
+} TO_CustomIdle_t;
 
 typedef struct
 {
     TO_CustomSocketPChnl_t  socket;
-    TO_CustomSerialPChnl_t  serial;
-    uint8                   idleBuff[TO_CUSTOM_TF_IDLE_SIZE];
+    TO_CustomIdle_t         IdlePacket;
 } TO_CustomData_t;
 
 /*
@@ -114,8 +112,8 @@ static TO_CustomData_t g_TO_CustomData;
 ** Local Variables
 */
 static uint8           idlePattern[32];
-static CFE_MSG_Message_t   *pIdlePacket = (CFE_MSG_Message_t *) &g_TO_CustomData.idleBuff;
-static const uint16    iCaduSize = TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE; 
+static CFE_MSG_Message_t   *pIdlePacket = CFE_MSG_PTR(g_TO_CustomData.IdlePacket.TlmHeader);
+//static const uint16    iCaduSize = TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE; 
 
 /*
 ** Local Function Definitions
@@ -147,8 +145,8 @@ int32 TO_CustomInit(void)
     
     /* Set Critical Message Ids which must always be
      * in config table. */
-    g_TO_AppData.criticalMid[0] = TO_HK_TLM_MID;
-    g_TO_AppData.criticalMid[1] = CI_HK_TLM_MID;
+    g_TO_AppData.criticalMid[0] = CFE_SB_ValueToMsgId(TO_HK_TLM_MID);
+    g_TO_AppData.criticalMid[1] = CFE_SB_ValueToMsgId(CI_HK_TLM_MID);
 
     /* Initialize Idle pattern as pseudo-random sequence. */
     IO_LIB_UTIL_GenPseudoRandomSeq(&idlePattern[0], 0xa9, 0xff);
@@ -158,17 +156,12 @@ int32 TO_CustomInit(void)
                            TO_CUSTOM_TF_IDLE_SIZE, 255);
 
     /* Initialize Master channels */
-    g_TO_CustomData.serial.pc.mc.mcConfig.scId = CFE_SPACECRAFT_ID;
-    g_TO_CustomData.serial.pc.mc.mcConfig.frameLength = TO_CUSTOM_TF_SIZE;
-    g_TO_CustomData.serial.pc.mc.mcConfig.hasErrCtrl = TO_CUSTOM_TF_ERR_CTRL;
-    g_TO_CustomData.serial.pc.mc.mcFrameCnt = 0;
-    
-    g_TO_CustomData.socket.pc.mc.mcConfig.scId = CFE_SPACECRAFT_ID;
+    g_TO_CustomData.socket.pc.mc.mcConfig.scId = CFE_PLATFORM_TBL_VALID_SCID_1;
     g_TO_CustomData.socket.pc.mc.mcConfig.frameLength = TO_CUSTOM_TF_SIZE;
     g_TO_CustomData.socket.pc.mc.mcConfig.hasErrCtrl = TO_CUSTOM_TF_ERR_CTRL;
     g_TO_CustomData.socket.pc.mc.mcFrameCnt = 0;
 
-    /* NOTE: We are setting VC ID to: Socket: 0, Serial: 1 */
+    /* NOTE: We are setting VC ID to: Socket: 0 */
 
     /* Set channel config table */
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] = 
@@ -189,26 +182,9 @@ int32 TO_CustomInit(void)
     {
         iStatus = TO_ERROR;
         goto end_of_function;
-    }
-
-    pChnl = &g_TO_CustomData.serial.pc;
-    CFE_PSP_MemCpy((void *) &pChnl->mc.vc.vcConfig, (void *) &chnlConfig[0], 
-                   sizeof(TM_SDLP_ChannelConfig_t));
-
-    if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo, 
-                            &pChnl->buffer[TM_SYNC_ASM_SIZE],
-                            &pChnl->mc.vc.ofBuff[0],
-                            &pChnl->mc.mcConfig,
-                            &pChnl->mc.vc.vcConfig) < 0)
-    {
-        iStatus = TO_ERROR;
-        goto end_of_function;
-    }
-    
+    }    
     /* Route 0: Udp */
     g_TO_AppData.routes[0].usExists = 1;
-    /* Route 1: Serial */
-    g_TO_AppData.routes[1].usExists = 1;
 
     /* Tie route 0 to CF channel 0 */
     g_TO_AppData.routes[0].sCfChnlIdx = 0;
@@ -223,7 +199,8 @@ end_of_function:
 int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
     int32 iStatus = TO_SUCCESS;
-    uint32 uiCmdCode = CFE_MSG_GetFcnCode(pMsg, CFE_MSG_FcnCode_t *FcnCode);
+    CFE_MSG_FcnCode_t uiCmdCode = 0;
+    CFE_MSG_GetFcnCode(pMsg, &uiCmdCode);
     switch (uiCmdCode)
     {
         case TO_SEND_DATA_TYPE_CC:
@@ -335,10 +312,10 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
     
     /* Synchronize frame into CADU */ 
-    iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, TM_SYNC_ASM_STR, 
-                                    TM_SYNC_ASM_SIZE,
-                                    TO_CUSTOM_TF_SIZE, 
-                                    TO_CUSTOM_TF_RANDOMIZE);
+    iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
+                                    (uint8_t) TM_SYNC_ASM_SIZE,
+                                    (uint16_t) TO_CUSTOM_TF_SIZE, 
+                                    (bool) TO_CUSTOM_TF_RANDOMIZE);
     if (iCaduSize < 0)
     {
         iStatus = TO_ERROR;
@@ -351,12 +328,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         iSentSize = IO_TransUdpSnd(&g_TO_CustomData.socket.udp, 
                                    &g_TO_CustomData.socket.pc.buffer[0], 
                                    iCaduSize);
-    }
-    else if (usRouteId == 1)
-    {
-        iSentSize = IO_TransRS422Write(g_TO_CustomData.serial.portFd, 
-                                       &g_TO_CustomData.serial.pc.buffer[0], 
-                                       iCaduSize);
     }
 
     iStatus = TO_CustomProcessSizeSent(iCaduSize, iSentSize, 0);
@@ -422,10 +393,6 @@ TO_CustomPChnl_t * TO_CustomGetChnl(uint16 usRouteId)
     if (usRouteId == 0)
     {
         pChnl = &g_TO_CustomData.socket.pc;
-    }
-    else if(usRouteId == 1)
-    {
-        pChnl = &g_TO_CustomData.serial.pc;
     }
 
     return pChnl;
@@ -499,11 +466,6 @@ void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
                                &cmd->clcw, 4);
                 break;
 
-            case 1:
-                CFE_PSP_MemCpy(&g_TO_CustomData.serial.pc.mc.vc.ocfBuff[0],
-                               &cmd->clcw, 4);
-                break;
-                
             default:
                 CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
@@ -541,17 +503,11 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
         goto end_of_function;
     }
 
-    g_TO_CustomData.serial.portFd = pCustomCmd->iFileDesc; 
-
-    CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
-                      "Serial Output Device File Descriptor Set.");
-
     /* Both routes are now configured */
     TO_SetRouteAsConfigured(0);
-    TO_SetRouteAsConfigured(1);
     
-    /* Enable both routes 0 and 1. */
-    routeMask = 0x0003;
+    /* Enable routes 0 */
+    routeMask = 0x0001;
 
 end_of_function:
     return routeMask;
