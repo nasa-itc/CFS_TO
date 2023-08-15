@@ -313,7 +313,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame); // this should probably take pframeinfo->frame
     if (iStatus != TO_SUCCESS)
     {
-        printf("%s \t %d\n", __FILE__, __LINE__);
         goto end_of_function;
     }
 
