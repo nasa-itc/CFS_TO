@@ -161,15 +161,14 @@ int32 TO_CustomInit(void)
     /* Set channel config table */
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
-        {0, 0, 0, 1, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {1, 0, 0, 1, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {0, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
     CFE_PSP_MemCpy((void* )&pChnl->mc.vc.vcConfig, (void* )&chnlConfig[0],
                    sizeof(TM_SDLP_ChannelConfig_t));
 
-    OS_printf("%s Init Channel: %d\n", __FILE__, __LINE__);
     if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo,
                             &pChnl->buffer[TM_SYNC_ASM_SIZE],
                             &pChnl->mc.vc.ofBuff[0],
@@ -179,10 +178,9 @@ int32 TO_CustomInit(void)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-    OS_printf("Init Channel: %d\n", __LINE__);
+
     /* Route 0: Udp */
     g_TO_AppData.routes[0].usExists = 1;
-    OS_printf("Init Channel: %d\n", __LINE__);
     /* Tie route 0 to CF channel 0 */
     g_TO_AppData.routes[0].sCfChnlIdx = 0;
 
@@ -242,7 +240,6 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-    OS_printf("%s %d\n", __FILE__, __LINE__);
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
     iStatus = TM_SDLP_StartFrame(pFrameInfo);
@@ -265,6 +262,8 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     uint8* pMcFrameCnt = NULL;
     uint8* pOcf = NULL;
 
+    SecurityAssociation_t* sa_ptr = NULL;
+
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
@@ -274,7 +273,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-
     /* Set Pointers */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
     pMcFrameCnt = &pChnl->mc.mcFrameCnt;
@@ -284,11 +282,17 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
+#ifdef TM_DEBUG
+        printf(KYEL "Preparing an IDLE PACKET!" RESET);
+#endif
         /* Add an idle packet to fill remaining free space */
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }
     else if (iStatus == 0)
     {
+#ifdef TM_DEBUG
+        printf(KYEL "Setting OID frame!\n" RESET);
+#endif
         /* Set frame as Only Idle Data (OID) */
         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
@@ -306,9 +310,10 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
 
     /* Perform SDLS */
-    //iStatus = Crypto_TM_ApplySecurity(sa_ptr);
+    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame); // this should probably take pframeinfo->frame
     if (iStatus != TO_SUCCESS)
     {
+        printf("%s \t %d\n", __FILE__, __LINE__);
         goto end_of_function;
     }
 
