@@ -693,6 +693,9 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
     if (g_TO_AppData.usOutputEnabled && g_TO_AppData.usOutputActive &&
         g_TO_AppData.routes[usRouteId].usIsEnabled)
     {
+#ifdef DEBUG
+    printf("Preparing framing mechanism...\n");
+#endif
         iStatus = TO_CustomFrameStart(usRouteId);
         if (iStatus != TO_SUCCESS)
         {
