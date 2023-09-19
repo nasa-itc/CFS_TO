@@ -49,6 +49,12 @@
 #include "to_app.h"
 #include "ci_msgids.h"
 
+/* Start additional includes for hostname snippet */
+#include<sys/socket.h>
+#include<netdb.h>	//hostent
+#include<arpa/inet.h>
+/* End additional includes for hostname snippet */
+
 /*
 ** Local Defines
 */
@@ -190,6 +196,27 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
     
     TO_EnableOutputCmd_t * pCustomCmd = (TO_EnableOutputCmd_t *) pCmdMsg;
     strncpy(cDestIp, pCustomCmd->cDestIp, sizeof(cDestIp));
+
+    /* 
+        Start hostname snippet from: https://stackoverflow.com/questions/38002016/problems-with-gethostbyname-c
+    */
+    struct hostent *he;
+	struct in_addr **addr_list;
+    int i;
+
+    if ( (he = gethostbyname(pCustomCmd->cDestIp) ) != NULL) 
+    {
+        addr_list = (struct in_addr **) he->h_addr_list;
+        for(i = 0; addr_list[i] != NULL; i++) 
+        {
+            //Return the first one;
+            strcpy(pCustomCmd->cDestIp , inet_ntoa(*addr_list[i]) );
+            break;
+        }
+    }
+    /* 
+        End hostname snippet from: https://stackoverflow.com/questions/38002016/problems-with-gethostbyname-c
+    */
     
     if (pCustomCmd->usDestPort > 0)
     {
