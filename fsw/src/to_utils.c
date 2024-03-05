@@ -351,7 +351,7 @@ bool TO_VerifyCmdLength(CFE_MSG_Message_t * pMsg,
 
             CFE_EVS_SendEvent(TO_MSGLEN_ERR_EID, CFE_EVS_EventType_ERROR,
                               "Rcvd invalid msgLen: usMsgId=0x%04X, "
-                              "cmdCode=%d, msgLen=%d, expectedLen=%d",
+                              "cmdCode=%d, msgLen=%ld, expectedLen=%d",
                               CFE_SB_MsgIdToValue(MsgId), usCmdCode, usMsgLen, usExpectedLen);
                               
             g_TO_AppData.HkTlm.usCmdErrCnt++;
