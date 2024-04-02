@@ -157,7 +157,7 @@ int32 TO_CustomInit(void)
                            TO_CUSTOM_TF_IDLE_SIZE, 255);
 
     /* Initialize Master channels */
-    g_TO_CustomData.socket.pc.mc.mcConfig.scId = CFE_PLATFORM_TBL_VALID_SCID_1;
+    g_TO_CustomData.socket.pc.mc.mcConfig.scId = 0x0003; //CFE_PLATFORM_TBL_VALID_SCID_1;
     g_TO_CustomData.socket.pc.mc.mcConfig.frameLength = TO_CUSTOM_TF_SIZE;
     g_TO_CustomData.socket.pc.mc.mcConfig.hasErrCtrl = TO_CUSTOM_TF_ERR_CTRL;
     g_TO_CustomData.socket.pc.mc.mcFrameCnt = 0;
@@ -167,7 +167,7 @@ int32 TO_CustomInit(void)
     /* Set channel config table */
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
-        {0, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
         {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
@@ -317,7 +317,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
 
     /* Perform SDLS */
-    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame); // this should probably take pframeinfo->frame
+    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame);
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
