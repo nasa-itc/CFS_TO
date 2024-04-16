@@ -286,13 +286,14 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     pOcf = &pChnl->mc.vc.ocfBuff[0];
 
     /* Check if there is packets, otherwise, fill with OID. */
+    /* -- Comment out idle packets until crash resolved
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
 #ifdef TM_DEBUG
         printf(KYEL "Preparing an IDLE PACKET!" RESET);
 #endif
-        /* Add an idle packet to fill remaining free space */
+        // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }
     else if (iStatus == 0)
@@ -300,15 +301,15 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
 #ifdef TM_DEBUG
         printf(KYEL "Setting OID frame!\n" RESET);
 #endif
-        /* Set frame as Only Idle Data (OID) */
+        // Set frame as Only Idle Data (OID)
         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
-
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
     }
-
+    */
+    
     /* Complete Frame */
     iStatus = TM_SDLP_CompleteFrame(pFrameInfo, pMcFrameCnt, pOcf);
     if (iStatus != TO_SUCCESS)
