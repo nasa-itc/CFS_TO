@@ -36,6 +36,7 @@ extern "C" {
 */
 #include "cfe.h"
 #include "../to/fsw/src/to_hktlm.h"
+#include "cop1.h"
 
 /*
 ** Defines
@@ -57,6 +58,11 @@ typedef struct
     CFE_MSG_CommandHeader_t	ucCmdHeader;
 } TO_DisableOutputCmd_t;
 
+typedef struct
+{
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
+    COP1_Clcw_t     clcw;  /**< COP-1 CLCW Data */
+} TO_CustomSetOcfCmd_t;
 
 
 /*************** Telemetry **************/

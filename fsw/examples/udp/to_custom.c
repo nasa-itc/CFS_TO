@@ -185,6 +185,15 @@ void TO_CustomCleanup(void)
 }
 
 /******************************************************************************/
+/** \brief Set the OCF trailer with the CLCW - Internal Cmd.
+*******************************************************************************/
+void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
+{
+    // Do nothing, added to support TC uplink and SPP downlink
+    return;
+}
+
+/******************************************************************************/
 /** \brief Enable Output Command Response
 *******************************************************************************/
 int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
