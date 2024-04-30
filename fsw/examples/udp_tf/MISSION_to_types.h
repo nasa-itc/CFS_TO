@@ -39,6 +39,8 @@ extern "C" {
 
 #include "cop1.h"
 
+#include "crypto.h"
+
 /*
 ** Defines
 */

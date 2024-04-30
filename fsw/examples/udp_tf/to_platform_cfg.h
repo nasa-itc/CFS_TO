@@ -41,7 +41,7 @@ extern "C" {
 #define TO_NUM_CRITICAL_MIDS   3
 
 #define TO_MAX_TBL_ENTRIES    100
-#define TO_WAKEUP_TIMEOUT     100
+#define TO_WAKEUP_TIMEOUT     50
 
 #define TO_CONFIG_TABLENAME "to_config"
 #define TO_CONFIG_FILENAME "/cf/to_config.tbl"
@@ -53,7 +53,7 @@ extern "C" {
 
 #define TO_CF_THROTTLE_SEM_NAME "CFTOSemId"
 
-#define TO_CUSTOM_TF_SIZE   1536
+#define TO_CUSTOM_TF_SIZE   1786
 #define TO_CUSTOM_TF_OVERFLOW_SIZE TO_CUSTOM_TF_SIZE
 #define TO_CUSTOM_TF_IDLE_SIZE TO_CUSTOM_TF_SIZE
 
