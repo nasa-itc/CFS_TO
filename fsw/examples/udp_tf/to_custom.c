@@ -51,6 +51,7 @@
 
 #include "to_app.h"
 #include "ci_msgids.h"
+#include "to_mission_cfg.h"
 
 /*
 ** Local Defines
@@ -125,7 +126,7 @@ static TO_CustomPChnl_t * TO_CustomGetChnl(uint16 usRouteId);
 static int32 TO_CustomProcessSizeSent(int32, int32, uint16);
 
 /*******************************************************************************
-** Custom Application Functions 
+** Custom Application Functions
 *******************************************************************************/
 
 /******************************************************************************/
@@ -134,15 +135,15 @@ static int32 TO_CustomProcessSizeSent(int32, int32, uint16);
 int32 TO_CustomInit(void)
 {
     int32 iStatus = TO_SUCCESS;
-    TO_CustomPChnl_t    *pChnl;
-    
+    TO_CustomPChnl_t* pChnl;
+
     /* Create socket for outgoing */
     if (IO_TransUdpCreateSocket(&g_TO_CustomData.socket.udp) < 0)
     {
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-    
+
     /* Set Critical Message Ids which must always be
      * in config table. */
     g_TO_AppData.criticalMid[0] = CFE_SB_ValueToMsgId(TO_HK_TLM_MID);
@@ -150,13 +151,13 @@ int32 TO_CustomInit(void)
 
     /* Initialize Idle pattern as pseudo-random sequence. */
     IO_LIB_UTIL_GenPseudoRandomSeq(&idlePattern[0], 0xa9, 0xff);
-    
+
     /* Initialize Idle packet with repeating idle pattern */
     TM_SDLP_InitIdlePacket(pIdlePacket, &idlePattern[0],
                            TO_CUSTOM_TF_IDLE_SIZE, 255);
 
     /* Initialize Master channels */
-    g_TO_CustomData.socket.pc.mc.mcConfig.scId = CFE_PLATFORM_TBL_VALID_SCID_1;
+    g_TO_CustomData.socket.pc.mc.mcConfig.scId = 0x0003; //CFE_PLATFORM_TBL_VALID_SCID_1;
     g_TO_CustomData.socket.pc.mc.mcConfig.frameLength = TO_CUSTOM_TF_SIZE;
     g_TO_CustomData.socket.pc.mc.mcConfig.hasErrCtrl = TO_CUSTOM_TF_ERR_CTRL;
     g_TO_CustomData.socket.pc.mc.mcFrameCnt = 0;
@@ -164,17 +165,17 @@ int32 TO_CustomInit(void)
     /* NOTE: We are setting VC ID to: Socket: 0 */
 
     /* Set channel config table */
-    TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] = 
+    TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
-        {0, 0, 0, 1, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {1, 0, 0, 1, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
-    
+
     pChnl = &g_TO_CustomData.socket.pc;
-    CFE_PSP_MemCpy((void *) &pChnl->mc.vc.vcConfig, (void *) &chnlConfig[0], 
+    CFE_PSP_MemCpy((void* )&pChnl->mc.vc.vcConfig, (void* )&chnlConfig[0],
                    sizeof(TM_SDLP_ChannelConfig_t));
 
-    if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo, 
+    if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo,
                             &pChnl->buffer[TM_SYNC_ASM_SIZE],
                             &pChnl->mc.vc.ofBuff[0],
                             &pChnl->mc.mcConfig,
@@ -182,19 +183,19 @@ int32 TO_CustomInit(void)
     {
         iStatus = TO_ERROR;
         goto end_of_function;
-    }    
+    }
+
     /* Route 0: Udp */
     g_TO_AppData.routes[0].usExists = 1;
-
     /* Tie route 0 to CF channel 0 */
     g_TO_AppData.routes[0].sCfChnlIdx = 0;
-    
+
 end_of_function:
     return iStatus;
 }
 
 /******************************************************************************/
-/** \brief Process of custom app commands 
+/** \brief Process of custom app commands
 *******************************************************************************/
 int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 {
@@ -206,7 +207,7 @@ int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
         case TO_SEND_DATA_TYPE_CC:
             TO_SendDataTypePktCmd(pMsg);
             break;
-        
+
         case TO_SET_OCF_DATA_CC:
             TO_CustomSetOcfCmd(pMsg);
             break;
@@ -220,7 +221,7 @@ int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 }
 
 /******************************************************************************/
-/** \brief Process data packet 
+/** \brief Process data packet
 *******************************************************************************/
 int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
                            uint16 usRouteId)
@@ -228,16 +229,15 @@ int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
     return TO_CustomProcessPacket(pMsg, usRouteId);
 }
 
-
 /******************************************************************************/
 /** \brief Start a new frame, copying overflow data if present.
 *******************************************************************************/
 int32 TO_CustomFrameStart(uint16 usRouteId)
 {
     int32 iStatus = TO_SUCCESS;
-    TO_CustomPChnl_t *pChnl         = NULL;
-    TM_SDLP_FrameInfo_t *pFrameInfo = NULL;
-    
+    TO_CustomPChnl_t* pChnl = NULL;
+    TM_SDLP_FrameInfo_t* pFrameInfo = NULL;
+
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
@@ -247,7 +247,6 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-        
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
     iStatus = TM_SDLP_StartFrame(pFrameInfo);
@@ -256,9 +255,8 @@ end_of_function:
     return iStatus;
 }
 
-
 /******************************************************************************/
-/** \brief Complete frame and send 
+/** \brief Complete frame and send
 *******************************************************************************/
 int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
 {
@@ -266,10 +264,12 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     int32 iSentSize = 0;
     int32 iStatus = TO_SUCCESS;
 
-    TO_CustomPChnl_t    *pChnl          = NULL; 
-    TM_SDLP_FrameInfo_t *pFrameInfo     = NULL; 
-    uint8               *pMcFrameCnt    = NULL; 
-    uint8               *pOcf           = NULL;
+    TO_CustomPChnl_t* pChnl = NULL;
+    TM_SDLP_FrameInfo_t* pFrameInfo = NULL;
+    uint8* pMcFrameCnt = NULL;
+    uint8* pOcf = NULL;
+
+    SecurityAssociation_t* sa_ptr = NULL;
 
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
@@ -280,37 +280,50 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-    
     /* Set Pointers */
-    pFrameInfo     = &pChnl->mc.vc.frameInfo;
-    pMcFrameCnt    = &pChnl->mc.mcFrameCnt;
-    pOcf           = &pChnl->mc.vc.ocfBuff[0];
+    pFrameInfo = &pChnl->mc.vc.frameInfo;
+    pMcFrameCnt = &pChnl->mc.mcFrameCnt;
+    pOcf = &pChnl->mc.vc.ocfBuff[0];
 
     /* Check if there is packets, otherwise, fill with OID. */
+    /* -- Comment out idle packets until crash resolved
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
-        /* Add an idle packet to fill remaining free space */
+#ifdef TM_DEBUG
+        printf(KYEL "Preparing an IDLE PACKET!" RESET);
+#endif
+        // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }
     else if (iStatus == 0)
     {
-        /* Set frame as Only Idle Data (OID) */
+#ifdef TM_DEBUG
+        printf(KYEL "Setting OID frame!\n" RESET);
+#endif
+        // Set frame as Only Idle Data (OID)
         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
-    
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
     }
-
+    */
+    
     /* Complete Frame */
     iStatus = TM_SDLP_CompleteFrame(pFrameInfo, pMcFrameCnt, pOcf);
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
     }
-    
+
+    /* Perform SDLS */
+    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame);
+    if (iStatus != TO_SUCCESS)
+    {
+        goto end_of_function;
+    }
+
     /* Synchronize frame into CADU */ 
     iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
                                     (uint8_t) TM_SYNC_ASM_SIZE,
@@ -320,13 +333,13 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     {
         iStatus = TO_ERROR;
         goto end_of_function;
-    }    
+    }
 
     /* Send Frame */
     if (usRouteId == 0)
     {
-        iSentSize = IO_TransUdpSnd(&g_TO_CustomData.socket.udp, 
-                                   &g_TO_CustomData.socket.pc.buffer[0], 
+        iSentSize = IO_TransUdpSnd(&g_TO_CustomData.socket.udp,
+                                   &g_TO_CustomData.socket.pc.buffer[0],
                                    iCaduSize);
     }
 
@@ -347,20 +360,19 @@ end_of_function:
     return iStatus;
 }
 
-
 /******************************************************************************/
 /** \brief Process a Packet and add to frame
 *******************************************************************************/
 int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
 {
     int32 iStatus = TO_SUCCESS;
-    TO_CustomPChnl_t *pChnl         = NULL;
-    TM_SDLP_FrameInfo_t *pFrameInfo = NULL;
-    
+    TO_CustomPChnl_t* pChnl = NULL;
+    TM_SDLP_FrameInfo_t* pFrameInfo = NULL;
+
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
-        /* This should never happen since route ID is checked several times 
+        /* This should never happen since route ID is checked several times
            before */
         CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "TO_CustomProcessPacket Error: Invalid Route ID:%u",
@@ -368,8 +380,8 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
         iStatus = TO_ERROR;
         goto end_of_function;
     }
-        
-    pFrameInfo     = &pChnl->mc.vc.frameInfo;
+
+    pFrameInfo = &pChnl->mc.vc.frameInfo;
 
     /* Add Packet */
     iStatus = TM_SDLP_AddPacket(pFrameInfo, pMsg);
@@ -379,17 +391,16 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
     }
 
 end_of_function:
-    return iStatus; 
+    return iStatus;
 }
-
 
 /******************************************************************************/
 /** \brief Get the physical channel based on route id
 *******************************************************************************/
-TO_CustomPChnl_t * TO_CustomGetChnl(uint16 usRouteId)
+TO_CustomPChnl_t* TO_CustomGetChnl(uint16 usRouteId)
 {
-    TO_CustomPChnl_t *pChnl = NULL;
-    
+    TO_CustomPChnl_t* pChnl = NULL;
+
     if (usRouteId == 0)
     {
         pChnl = &g_TO_CustomData.socket.pc;
@@ -398,14 +409,13 @@ TO_CustomPChnl_t * TO_CustomGetChnl(uint16 usRouteId)
     return pChnl;
 }
 
-
 /******************************************************************************/
 /** \brief Check Data Sent Size (Local)
 *******************************************************************************/
 int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, uint16 routeId)
 {
     int32 iStatus = TO_SUCCESS;
-    
+
     if (iSentSize < 0)
     {
         CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
@@ -419,7 +429,7 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, uint16 routeId)
         /* NOTE: If this happens, that means a partial frame was sent. Your
            Ground support equipment must be able to handle partial frames.
            For example, ITOS does not handle this case well and goes into
-           a weird state, where every following TF is corrupted. 
+           a weird state, where every following TF is corrupted.
            This condition indicates that throttling is necessary. */
         
         CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
@@ -433,9 +443,8 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, uint16 routeId)
     return iStatus;
 }
 
-
 /******************************************************************************/
-/** \brief Custom Cleanup 
+/** \brief Custom Cleanup
 *******************************************************************************/
 void TO_CustomCleanup(void)
 {
@@ -445,32 +454,31 @@ void TO_CustomCleanup(void)
                           "TO - Closing Socket."); 
         IO_TransUdpCloseSocket(&g_TO_CustomData.socket.udp);
     }
-    
+
     return;
 }
-
 
 /******************************************************************************/
 /** \brief Set the OCF trailer with the CLCW - Internal Cmd.
 *******************************************************************************/
 void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
 {
-    TO_CustomSetOcfCmd_t *cmd = (TO_CustomSetOcfCmd_t *) pCmdMsg;
+    TO_CustomSetOcfCmd_t* cmd = (TO_CustomSetOcfCmd_t* )pCmdMsg;
 
     if (TO_VerifyCmdLength(pCmdMsg, sizeof(TO_CustomSetOcfCmd_t)))
     {
         switch (COP1_GetClcwVcId(&cmd->clcw))
         {
-            case 0:
-                CFE_PSP_MemCpy(&g_TO_CustomData.socket.pc.mc.vc.ocfBuff[0],
-                               &cmd->clcw, 4);
-                break;
+        case 0:
+            CFE_PSP_MemCpy(&g_TO_CustomData.socket.pc.mc.vc.ocfBuff[0],
+                           &cmd->clcw, 4);
+            break;
 
             default:
                 CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
         }
-    } 
+    }
 }
 
 /******************************************************************************/
@@ -481,11 +489,11 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
     int32 iStatus = IO_TRANS_UDP_NO_ERROR;
     int32 routeMask = TO_ERROR;
     char cDestIp[TO_MAX_IP_STRING_SIZE];
-    uint16 usDestPort = 0; 
+    uint16 usDestPort = 0;
 
-    TO_EnableOutputCmd_t * pCustomCmd = (TO_EnableOutputCmd_t *) pCmdMsg;
+    TO_EnableOutputCmd_t* pCustomCmd = (TO_EnableOutputCmd_t*)pCmdMsg;
     strncpy(cDestIp, pCustomCmd->cDestIp, sizeof(cDestIp));
-    
+
     if (pCustomCmd->usDestPort > 0)
     {
         usDestPort = pCustomCmd->usDestPort;
@@ -494,10 +502,10 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
     {
         usDestPort = TO_DEFAULT_DEST_PORT;
     }
-    
-    iStatus = IO_TransUdpSetDestAddr(&g_TO_CustomData.socket.udp, 
-                                     pCustomCmd->cDestIp, 
-                                     usDestPort); 
+
+    iStatus = IO_TransUdpSetDestAddr(&g_TO_CustomData.socket.udp,
+                                     pCustomCmd->cDestIp,
+                                     usDestPort);
     if (iStatus < 0)
     {
         goto end_of_function;
@@ -505,7 +513,7 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 
     /* Both routes are now configured */
     TO_SetRouteAsConfigured(0);
-    
+
     /* Enable routes 0 */
     routeMask = 0x0001;
 
@@ -522,7 +530,6 @@ int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
     g_TO_AppData.usOutputEnabled = 0;
     return TO_SUCCESS;
 }
-
 
 /*******************************************************************************
 ** Non standard custom Commands

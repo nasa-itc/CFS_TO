@@ -88,7 +88,8 @@ INCLUDE_PATH = -I$(OSAL_SRC)/inc \
                -I$(CFS_APP_SRC)/$(APPTARGET)/fsw/tables \
                -I$(CFS_MISSION_INC) \
                -I../cfe/inc \
-               -I../inc 
+               -I../inc \
+               -I../../components/cryptolib
 
 #
 # Define the VPATH make variable. 
