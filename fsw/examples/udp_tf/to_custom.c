@@ -249,7 +249,7 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
     }
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
-    iStatus = TM_SDLP_StartFrame(pFrameInfo);
+    iStatus = TM_SDLP_StartFrame(pFrameInfo, pChnl->buffer);
 
 end_of_function:
     return iStatus;
@@ -290,11 +290,11 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
-#ifdef TM_DEBUG
+// #ifdef TM_DEBUG
         printf(KYEL "Preparing an IDLE PACKET!" RESET);
-#endif
+// #endif
         // Add an idle packet to fill remaining free space
-        iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
+        iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pChnl->buffer, pIdlePacket);
     }
     /*
     else if (iStatus == 0)
@@ -311,6 +311,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
     */
     
+    printf("Completing Frame...\n");
     /* Complete Frame */
     iStatus = TM_SDLP_CompleteFrame(pFrameInfo, pMcFrameCnt, pOcf);
     if (iStatus != TO_SUCCESS)
@@ -318,6 +319,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         goto end_of_function;
     }
 
+    printf("Applying Security...\n");
     /* Perform SDLS */
     iStatus = Crypto_TM_ApplySecurity(pChnl->buffer);
     if (iStatus != TO_SUCCESS)
@@ -385,7 +387,7 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
     pFrameInfo = &pChnl->mc.vc.frameInfo;
 
     /* Add Packet */
-    iStatus = TM_SDLP_AddPacket(pFrameInfo, pMsg);
+    iStatus = TM_SDLP_AddPacket(pFrameInfo, pChnl->buffer, pMsg);
     if (iStatus >= 0)
     {
         iStatus = TO_SUCCESS;
