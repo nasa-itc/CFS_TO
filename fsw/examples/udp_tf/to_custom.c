@@ -269,7 +269,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     uint8* pMcFrameCnt = NULL;
     uint8* pOcf = NULL;
 
-    SecurityAssociation_t* sa_ptr = NULL;
+    // SecurityAssociation_t* sa_ptr = NULL;
 
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
@@ -286,7 +286,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     pOcf = &pChnl->mc.vc.ocfBuff[0];
 
     /* Check if there is packets, otherwise, fill with OID. */
-    /* -- Comment out idle packets until crash resolved
+    /* -- Comment out idle packets until crash resolved */
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
@@ -296,6 +296,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }
+    /*
     else if (iStatus == 0)
     {
 #ifdef TM_DEBUG
@@ -318,7 +319,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
 
     /* Perform SDLS */
-    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame);
+    iStatus = Crypto_TM_ApplySecurity(pChnl->buffer);
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
