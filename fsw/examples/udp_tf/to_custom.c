@@ -291,7 +291,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     if (iStatus == 1)
     {
 // #ifdef TM_DEBUG
-        printf(KYEL "Preparing an IDLE PACKET!" RESET);
+        printf(KYEL "Preparing an IDLE PACKET!\n" RESET);
 // #endif
         // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pChnl->buffer, pIdlePacket);
