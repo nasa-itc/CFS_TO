@@ -41,6 +41,7 @@ typedef enum
     TO_MSGID_ERR_EID      = 11,
     TO_MSGLEN_ERR_EID     = 12,
     TO_CUSTOM_ERR_EID     = 13,
+    TO_CRYPTO_GENERIC_ERR_EID = 14,
     TO_EVT_CNT
 } TO_Events_t;
 

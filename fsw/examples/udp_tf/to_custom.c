@@ -296,6 +296,10 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pChnl->buffer, pIdlePacket);
     }
+    else
+    {
+        printf(" NO DATA IN FRAME?!?!?!?!?!?\n");
+    }
     /*
     else if (iStatus == 0)
     {
@@ -321,12 +325,17 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
 
     printf("Applying Security...\n");
     /* Perform SDLS */
-    iStatus = Crypto_TM_ApplySecurity(pChnl->buffer);
+    // iStatus = Crypto_TM_ApplySecurity(pChnl->buffer);
+    iStatus = Crypto_TM_ApplySecurity((uint8_t *)pFrameInfo->frame);
     if (iStatus != TO_SUCCESS)
     {
+        CFE_EVS_SendEvent(TO_CRYPTO_GENERIC_ERR_EID, CFE_EVS_EventType_ERROR,
+            "TM_ApplySecurity Failed! Returned Status: %d", iStatus);
+        printf("Apply security failed with return code %d\n", iStatus);
         goto end_of_function;
     }
 
+    printf("Synchronizing frame...\n");
     /* Synchronize frame into CADU */ 
     iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
                                     (uint8_t) TM_SYNC_ASM_SIZE,
@@ -341,9 +350,11 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     /* Send Frame */
     if (usRouteId == 0)
     {
+        printf("Calling transudpsend...\n");
         iSentSize = IO_TransUdpSnd(&g_TO_CustomData.socket.udp,
                                    &g_TO_CustomData.socket.pc.buffer[0],
                                    iCaduSize);
+        printf("Transudp sent %d bytes!\n", iSentSize);
     }
 
     iStatus = TO_CustomProcessSizeSent(iCaduSize, iSentSize, 0);
