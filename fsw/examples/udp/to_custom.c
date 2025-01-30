@@ -50,9 +50,13 @@
 #include "ci_msgids.h"
 
 /* Start additional includes for hostname snippet */
-#include<sys/socket.h>
-#include<netdb.h>	//hostent
-#include<arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 /* End additional includes for hostname snippet */
 
 /*
@@ -202,31 +206,35 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
     int32 routeMask = TO_ERROR;
     char cDestIp[TO_MAX_IP_STRING_SIZE];
     uint16 usDestPort = 0;
-    
-    TO_EnableOutputCmd_t * pCustomCmd = (TO_EnableOutputCmd_t *) pCmdMsg;
+
+    TO_EnableOutputCmd_t *pCustomCmd = (TO_EnableOutputCmd_t *)pCmdMsg;
     strncpy(cDestIp, pCustomCmd->cDestIp, sizeof(cDestIp));
 
-    /* 
-        Start hostname snippet from: https://stackoverflow.com/questions/38002016/problems-with-gethostbyname-c
-    */
-    struct hostent *he;
-	struct in_addr **addr_list;
-    int i;
+    struct addrinfo hints, *res, *p;
+    int status;
+    void *addr;
 
-    if ( (he = gethostbyname(pCustomCmd->cDestIp) ) != NULL) 
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // Use AF_UNSPEC for IPv6 support
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((status = getaddrinfo(pCustomCmd->cDestIp, NULL, &hints, &res)) == 0)
     {
-        addr_list = (struct in_addr **) he->h_addr_list;
-        for(i = 0; addr_list[i] != NULL; i++) 
+        // Loop through results and get the first valid IP
+        for (p = res; p != NULL; p = p->ai_next)
         {
-            //Return the first one;
-            strcpy(pCustomCmd->cDestIp , inet_ntoa(*addr_list[i]) );
-            break;
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+            addr = &(ipv4->sin_addr);
+
+            // Convert to string and store it
+            if (inet_ntop(p->ai_family, addr, pCustomCmd->cDestIp, INET_ADDRSTRLEN) != NULL)
+            {
+                break;
+            }
         }
+        freeaddrinfo(res);
     }
-    /* 
-        End hostname snippet from: https://stackoverflow.com/questions/38002016/problems-with-gethostbyname-c
-    */
-    
+
     if (pCustomCmd->usDestPort > 0)
     {
         usDestPort = pCustomCmd->usDestPort;
@@ -236,8 +244,7 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
         usDestPort = TO_DEFAULT_DEST_PORT;
     }
 
-    iStatus = IO_TransUdpSetDestAddr(&g_TO_CustomData.udp, pCustomCmd->cDestIp, 
-                                     usDestPort);                               
+    iStatus = IO_TransUdpSetDestAddr(&g_TO_CustomData.udp, pCustomCmd->cDestIp, usDestPort);
 
     if (iStatus < 0)
     {
@@ -249,8 +256,9 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
     routeMask = 0x0001;
 
 end_of_function:
-    return routeMask; 
+    return routeMask;
 }
+
 
 /******************************************************************************/
 /** \brief Disable Output Command Response
