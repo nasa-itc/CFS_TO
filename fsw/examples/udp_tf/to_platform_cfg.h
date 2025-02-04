@@ -59,7 +59,7 @@ extern "C" {
 
 #define TO_CUSTOM_NUM_CHNL      2
 #define TO_CUSTOM_TF_SCID       0
-#define TO_CUSTOM_TF_ERR_CTRL   0
+#define TO_CUSTOM_TF_ERR_CTRL   1
 #define TO_CUSTOM_TF_RANDOMIZE  0
 
 

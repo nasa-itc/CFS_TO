@@ -168,13 +168,14 @@ int32 TO_CustomInit(void)
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
         {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {10, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
     CFE_PSP_MemCpy((void* )&pChnl->mc.vc.vcConfig, (void* )&chnlConfig[0],
                    sizeof(TM_SDLP_ChannelConfig_t));
 
+    // Note: FSW passes buffer index that accounts for ASM
     if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo,
                             &pChnl->buffer[TM_SYNC_ASM_SIZE],
                             &pChnl->mc.vc.ofBuff[0],
@@ -295,25 +296,20 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
 // #endif
         // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pChnl->buffer, pIdlePacket);
-    }
-    else
-    {
-        printf(" NO DATA IN FRAME?!?!?!?!?!?\n");
-    }
-    /*
+    }  
     else if (iStatus == 0)
     {
-#ifdef TM_DEBUG
+// // #ifdef TM_DEBUG
         printf(KYEL "Setting OID frame!\n" RESET);
-#endif
-        // Set frame as Only Idle Data (OID)
-        iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
+// // #endif
+//         // Set frame as Only Idle Data (OID)
+//         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
+// 
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
     }
-    */
     
     printf("Completing Frame...\n");
     /* Complete Frame */
@@ -335,12 +331,28 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         goto end_of_function;
     }
 
+    printf("Printing frame AFTER applySec...\n\t");
+    for (int i=0; i < 1790; i++)
+    {
+        printf("%02X", *(((uint8 *)pFrameInfo->frame)+i));
+    }
+    printf("\n");
+
     printf("Synchronizing frame...\n");
     /* Synchronize frame into CADU */ 
     iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
                                     (uint8_t) TM_SYNC_ASM_SIZE,
                                     (uint16_t) TO_CUSTOM_TF_SIZE, 
                                     (bool) TO_CUSTOM_TF_RANDOMIZE);
+
+    printf("Printing frame AFTER SYNC_Synchronize...\n\t");
+    for (int i=0; i < 1790; i++)
+    {
+        printf("%02X", *(((uint8 *)pFrameInfo->frame)+i));
+    }
+    printf("\n");
+
+
     if (iCaduSize < 0)
     {
         iStatus = TO_ERROR;
