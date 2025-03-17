@@ -60,6 +60,7 @@
 #include <string.h>
 #include "cfe.h"
 #include "to_app.h"
+#include "inttypes.h"
 
 /*
 ** Local Defines
@@ -577,19 +578,23 @@ int32 TO_RcvMsg(int32 iBlocking)
     CFE_SB_MsgId_t  MsgId = CFE_SB_INVALID_MSG_ID;
 
     /* Wait for WakeUp messages from scheduler */
-    iStatus = CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&g_TO_AppData.SchMsgPtr,  g_TO_AppData.SchPipeId,  iBlocking);
+    iStatus = CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&g_TO_AppData.SchMsgPtr,  g_TO_AppData.SchPipeId, iBlocking);
         
     /* Performance Log Entry stamp - #2 */
     CFE_ES_PerfLogEntry(TO_MAIN_TASK_PERF_ID); 
     
     if (iStatus == CFE_SUCCESS)
     {
+        printf("File: %s, Line: %d, TO_RcvMsg got something from SB_RcvBuffer!\n", __FILE__, __LINE__);
         CFE_MSG_GetMsgId(g_TO_AppData.SchMsgPtr, &MsgId);
         switch (CFE_SB_MsgIdToValue(MsgId))
         {
             case TO_WAKEUP_MID:
+                printf("\tTO Process New Cmds...\n");
                 TO_ProcessNewCmds();
+                printf("\tTO Process Tlm Pipes...\n");
                 TO_ProcessTlmPipes();
+                printf("\tTO Process Send Out Data...\n");
                 TO_SendOutData();
                 break;
 
@@ -602,8 +607,11 @@ int32 TO_RcvMsg(int32 iBlocking)
      * Scheduler for wakeup message. */
     else if (iStatus == CFE_SB_TIME_OUT)
     {
+        printf("\tTO Process New Cmds...\n");
         TO_ProcessNewCmds();
+        printf("\tTO Process Tlm Pipes...\n");
         TO_ProcessTlmPipes();
+        printf("\tTO Process Send Out Data...\n");
         TO_SendOutData();
     }
     else
@@ -625,21 +633,25 @@ void TO_ProcessTlmPipes(void)
 {
     uint8 ii = 0;
     uint16 wakeCnt = g_TO_AppData.usWakeupCount;
-
+    printf("\\/ \\/ \\/ \\/ \\/\n");
+    printf("File: %s, Line: %d - ProcessTlmPipes\n", __FILE__, __LINE__);
     /* Loop over every pipe and process data. */
     for (ii = 0; ii < TO_MAX_NUM_ROUTES; ++ii)
     {
         /* Only existing routes will have a pipe to process */
         if (g_TO_AppData.routes[ii].usExists)
         {
+            printf("File: %s, Line: %d - Output Route Exists\n", __FILE__, __LINE__);
             /* Process the pipe if the period corresponds. */
             if (wakeCnt % g_TO_AppData.routes[ii].usWakePeriod == 0)
             {
+                printf("File: %s, Line: %d - Process pipe if wake period corresponds\n", __FILE__, __LINE__);
                 TO_ProcessNewData(&g_TO_AppData.tlmPipes[ii], ii);
             }
         }
         else
         {
+            // printf("Line: %d, nothing to process\n", __LINE__);
             break;
         }
     }
@@ -673,6 +685,7 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
     int16                   sCfChnlIdx;
     uint32                  uiCntSemId; 
     OS_count_sem_prop_t     cntSemProp;
+    CFE_Status_t            rc = -1;
 
 #ifdef TO_FRAMING_ENABLED
     /* Prepare framing mechanism, if applicable. */
@@ -699,14 +712,20 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
         uiCntSemId = g_TO_AppData.cfChnls[sCfChnlIdx].uiCfCntSemId;
     }
 
+    printf("File: %s, Line: %d - ProcessNewData\n", __FILE__, __LINE__);
+
     while (bGotNewMsg)
     {
-        if (CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&pTlmMsg,  pTlmPipe->cfePipeId,  CFE_SB_POLL) == 
+        printf("File: %s, Line: %d - Trying Loop to SB_ReceiveBuffer\n", __FILE__, __LINE__); //
+        rc = CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&pTlmMsg,  pTlmPipe->cfePipeId,  CFE_SB_POLL);
+        if ( rc == 
             CFE_SUCCESS)
         {
+            printf("\tFile: %s, Line: %d\n", __FILE__, __LINE__);
             /* Process if output is enabled and active. Otherwise, drop. */
             if (g_TO_AppData.usOutputEnabled && g_TO_AppData.usOutputActive)
             {
+                printf("\tFile: %s, Line: %d\n", __FILE__, __LINE__);
                 CFE_MSG_GetMsgId(pTlmMsg, &usMsgId);
                 iTblIdx = TO_FindTableIndex(g_TO_AppData.pConfigTable, usMsgId);
 
@@ -720,6 +739,7 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
                  * this route. */
                 else
                 {
+                    printf("\tMatched a table index!\n");
                     pEntry = &g_TO_AppData.pConfigTable->entries[iTblIdx];
                     
                     /* Process data over enabled routes for enabled messages */ 
@@ -727,14 +747,24 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
                         (pEntry->usRouteMask & (1<<usRouteId)) &&
                         g_TO_AppData.routes[usRouteId].usIsEnabled)
                     {
+                        printf("\tFile: %s, Line: %d\n", __FILE__, __LINE__);
                         CFE_MSG_GetSize(pTlmMsg, &size);
                         iStatus = TO_CustomProcessData(pTlmMsg, size, iTblIdx, usRouteId);
                         if (iStatus < 0)
                         {
+                            printf("\tFile: %s, Line: %d\n", __FILE__, __LINE__);
                             break;
                         }
                     }
+                    else
+                    {
+                        printf("\tRoutes not enabled?\n");
+                    }
                 }
+            }
+            else
+            {
+                printf("Route not enabled, output not active?\n");
             }
 
             if(bHasCfChnl)
@@ -751,6 +781,7 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
         }
         else
         {
+            printf("\tCFE_SB_ReceiveBuffer returned: %d, no more new messages to process\n", (int32)rc);
             bGotNewMsg = false;
         }
     }

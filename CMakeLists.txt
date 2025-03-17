@@ -23,6 +23,8 @@ include_directories(fsw/examples/${TO_TRANSPORT})
 aux_source_directory(fsw/src APP_SRC_FILES)
 aux_source_directory(fsw/examples/${TO_TRANSPORT} APP_SRC_FILES)
 
+# add_compile_options("-fstack-protector")
+
 # Create the app module
 add_cfe_app(to ${APP_SRC_FILES})
 

@@ -227,6 +227,7 @@ int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 int32 TO_CustomProcessData(CFE_MSG_Message_t * pMsg, int32 size, int32 iTblIdx,
                            uint16 usRouteId)
 {
+    printf("Inside TO_CustomProcessData...\n");
     return TO_CustomProcessPacket(pMsg, usRouteId);
 }
 
@@ -332,7 +333,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
 
     printf("Printing frame AFTER applySec...\n\t");
-    for (int i=0; i < 1790; i++)
+    for (int i=0; i < TO_CUSTOM_TF_SIZE; i++)
     {
         printf("%02X", *(((uint8 *)pFrameInfo->frame)+i));
     }
@@ -346,9 +347,14 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
                                     (bool) TO_CUSTOM_TF_RANDOMIZE);
 
     printf("Printing frame AFTER SYNC_Synchronize...\n\t");
-    for (int i=0; i < 1790; i++)
+    uint16_t caduLength = TO_CUSTOM_TF_SIZE;
+    if (TM_CADU_HAS_ASM == 1)
     {
-        printf("%02X", *(((uint8 *)pFrameInfo->frame)+i));
+        caduLength += TM_SYNC_ASM_SIZE;
+    }
+    for (int i=0; i < caduLength; i++)
+    {
+        printf("%02X", *(((uint8 *)pChnl->buffer)+i));
     }
     printf("\n");
 
@@ -394,6 +400,8 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
     int32 iStatus = TO_SUCCESS;
     TO_CustomPChnl_t* pChnl = NULL;
     TM_SDLP_FrameInfo_t* pFrameInfo = NULL;
+
+    printf("Inside TO_CustomProcessPacket...\n");
 
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
@@ -459,7 +467,7 @@ int32 TO_CustomProcessSizeSent(int32 size, int32 iSentSize, uint16 routeId)
            This condition indicates that throttling is necessary. */
         
         CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
-            "TO sent incomplete message (Insuficient bandwidth likely). " 
+            "TO sent incomplete message (Insufficient bandwidth likely). " 
             "ROUTE ID:%u, MsgSize:%d, SentSize:%d. Route disabled.", 
             routeId, size, iSentSize);
         TO_DisableRoute(routeId);

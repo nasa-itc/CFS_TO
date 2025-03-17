@@ -41,7 +41,7 @@ extern "C" {
 #define TO_NUM_CRITICAL_MIDS   3
 
 #define TO_MAX_TBL_ENTRIES    100
-#define TO_WAKEUP_TIMEOUT     50
+#define TO_WAKEUP_TIMEOUT     500 // was 50.. unsure why, likely todo with cfdp
 
 #define TO_CONFIG_TABLENAME "to_config"
 #define TO_CONFIG_FILENAME "/cf/to_config.tbl"
@@ -59,7 +59,7 @@ extern "C" {
 
 #define TO_CUSTOM_NUM_CHNL      2
 #define TO_CUSTOM_TF_SCID       0
-#define TO_CUSTOM_TF_ERR_CTRL   1
+#define TO_CUSTOM_TF_ERR_CTRL   0 //1 works .. 0 breaks!
 #define TO_CUSTOM_TF_RANDOMIZE  0
 
 

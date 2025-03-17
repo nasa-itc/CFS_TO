@@ -401,6 +401,7 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
     pFrameInfo     = &pChnl->mc.vc.frameInfo;
 
     /* Add Packet */
+    printf("Preparing to call add packet!\n");
     iStatus = TM_SDLP_AddPacket(pFrameInfo, pMsg);
     if (iStatus >= 0)
     {
