@@ -251,7 +251,7 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
     }
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
-    iStatus = TM_SDLP_StartFrame(pFrameInfo, pChnl->buffer);
+    iStatus = TM_SDLP_StartFrame(pFrameInfo);
 
 end_of_function:
     return iStatus;
@@ -418,7 +418,7 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
     pFrameInfo = &pChnl->mc.vc.frameInfo;
 
     /* Add Packet */
-    iStatus = TM_SDLP_AddPacket(pFrameInfo, pChnl->buffer, pMsg);
+    iStatus = TM_SDLP_AddPacket(pFrameInfo, pMsg);
     if (iStatus >= 0)
     {
         iStatus = TO_SUCCESS;
