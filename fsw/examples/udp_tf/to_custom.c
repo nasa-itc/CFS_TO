@@ -296,7 +296,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         printf(KYEL "Preparing an IDLE PACKET!\n" RESET);
 // #endif
         // Add an idle packet to fill remaining free space
-        iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pChnl->buffer, pIdlePacket);
+        iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }  
     else if (iStatus == 0)
     {
@@ -304,7 +304,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         printf(KYEL "Setting OID frame!\n" RESET);
 // // #endif
 //         // Set frame as Only Idle Data (OID)
-//         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
+        iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
 // 
     if (iStatus != TO_SUCCESS)
