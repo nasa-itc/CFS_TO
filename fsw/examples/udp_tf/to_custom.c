@@ -168,7 +168,7 @@ int32 TO_CustomInit(void)
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
         {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {2, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
@@ -249,6 +249,10 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
     }
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
+    if (pFrameInfo->isReady)
+    {
+        goto end_of_function;
+    }
     iStatus = TM_SDLP_StartFrame(pFrameInfo);
 
 end_of_function:
@@ -269,8 +273,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     uint8* pMcFrameCnt = NULL;
     uint8* pOcf = NULL;
 
-    SecurityAssociation_t* sa_ptr = NULL;
-
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
@@ -286,7 +288,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     pOcf = &pChnl->mc.vc.ocfBuff[0];
 
     /* Check if there is packets, otherwise, fill with OID. */
-    /* -- Comment out idle packets until crash resolved
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
@@ -296,7 +297,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }
-    else if (iStatus == 0)
+    else
     {
 #ifdef TM_DEBUG
         printf(KYEL "Setting OID frame!\n" RESET);
@@ -308,7 +309,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     {
         goto end_of_function;
     }
-    */
     
     /* Complete Frame */
     iStatus = TM_SDLP_CompleteFrame(pFrameInfo, pMcFrameCnt, pOcf);
@@ -318,7 +318,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
 
     /* Perform SDLS */
-    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame);
+    iStatus = Crypto_TM_ApplySecurity((uint8_t*)pFrameInfo->frame, 1786);
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
@@ -327,7 +327,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     /* Synchronize frame into CADU */ 
     iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
                                     (uint8_t) TM_SYNC_ASM_SIZE,
-                                    (uint16_t) TO_CUSTOM_TF_SIZE, 
+                                    (uint16_t) TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE, 
                                     (bool) TO_CUSTOM_TF_RANDOMIZE);
     if (iCaduSize < 0)
     {
