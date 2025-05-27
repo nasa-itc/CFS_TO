@@ -328,7 +328,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     /* Synchronize frame into CADU */ 
     iCaduSize = TM_SYNC_Synchronize(pChnl->buffer, (char*) TM_SYNC_ASM_STR, 
                                     (uint8_t) TM_SYNC_ASM_SIZE,
-                                    (uint16_t) TO_CUSTOM_TF_SIZE + TM_SYNC_ASM_SIZE, 
+                                    (uint16_t) TO_CUSTOM_TF_SIZE, 
                                     (bool) TO_CUSTOM_TF_RANDOMIZE);
     if (iCaduSize < 0)
     {
