@@ -53,6 +53,16 @@
 #include "ci_msgids.h"
 #include "to_mission_cfg.h"
 
+/* Start additional includes for hostname snippet */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+/* End additional includes for hostname snippet */
+
 /*
 ** Local Defines
 */
@@ -494,6 +504,31 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 
     TO_EnableOutputCmd_t* pCustomCmd = (TO_EnableOutputCmd_t*)pCmdMsg;
     strncpy(cDestIp, pCustomCmd->cDestIp, sizeof(cDestIp));
+
+    struct addrinfo hints, *res, *p;
+    int status;
+    void *addr;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // Use AF_UNSPEC for IPv6 support
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((status = getaddrinfo(pCustomCmd->cDestIp, NULL, &hints, &res)) == 0)
+    {
+        // Loop through results and get the first valid IP
+        for (p = res; p != NULL; p = p->ai_next)
+        {
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+            addr = &(ipv4->sin_addr);
+
+            // Convert to string and store it
+            if (inet_ntop(p->ai_family, addr, pCustomCmd->cDestIp, INET_ADDRSTRLEN) != NULL)
+            {
+                break;
+            }
+        }
+        freeaddrinfo(res);
+    }
 
     if (pCustomCmd->usDestPort > 0)
     {
