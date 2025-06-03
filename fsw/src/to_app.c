@@ -704,6 +704,13 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
         if (CFE_SB_ReceiveBuffer((CFE_SB_Buffer_t **)&pTlmMsg,  pTlmPipe->cfePipeId,  CFE_SB_POLL) == 
             CFE_SUCCESS)
         {
+            OS_printf("TO_SB_Recv: 0x");
+            for (int i = 0; i < 1790; i++)
+            {
+                OS_printf("%02X", pTlmMsg->Byte[i]);
+            }
+            OS_printf("\n");
+
             /* Process if output is enabled and active. Otherwise, drop. */
             if (g_TO_AppData.usOutputEnabled && g_TO_AppData.usOutputActive)
             {
@@ -755,7 +762,7 @@ void TO_ProcessNewData(TO_TlmPipe_t *pTlmPipe, uint16 usRouteId)
         }
     }
 
-#ifdef TO_FRAMING_ENABLED
+//#ifdef TO_FRAMING_ENABLED
 end_of_function:
     
     /* Complete and send a frame, if applicable. */
@@ -768,7 +775,7 @@ end_of_function:
     }
 
     return;
-#endif
+//#endif
 }
     
 

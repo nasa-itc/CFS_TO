@@ -178,8 +178,8 @@ int32 TO_CustomInit(void)
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
         {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {4, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {4, 0, 1, 0, 63, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {5, 0, 1, 0, 63, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
