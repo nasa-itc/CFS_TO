@@ -178,8 +178,8 @@ int32 TO_CustomInit(void)
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
         {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {4, 0, 1, 0, 63, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {5, 0, 1, 0, 63, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {4, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
@@ -310,11 +310,12 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
     else
     {
-#ifdef TM_DEBUG
-        printf(KYEL "Setting OID frame!\n" RESET);
-#endif
-        // Set frame as Only Idle Data (OID)
-        iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
+        goto end_of_function;
+// #ifdef TM_DEBUG
+//         printf(KYEL "Setting OID frame!\n" RESET);
+// #endif
+//         // Set frame as Only Idle Data (OID)
+//         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
     if (iStatus != TO_SUCCESS)
     {
@@ -485,9 +486,9 @@ void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
                            &cmd->clcw, 4);
             break;
 
-            default:
-                CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
-                          "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
+        default:
+            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
+                      "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
         }
     }
 }
