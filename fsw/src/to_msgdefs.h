@@ -2,7 +2,7 @@
 ** File:
 **  to_msgdefs.h
 **
-**  Copyright © 2016 United States Government as represented by the 
+**  Copyright ï¿½ 2016 United States Government as represented by the 
 **  Administrator of the National Aeronautics and Space Administration. 
 **  All Other Rights Reserved.  
 **
@@ -97,6 +97,7 @@
 
 /* Internal Custom Commands */
 #define TO_SET_OCF_DATA_CC              40
+#define TO_SET_VCID_CC                  41
 
 #endif /* _to_msgdefs_ */
 

@@ -66,6 +66,12 @@
 /*
 ** Local Defines
 */
+typedef enum
+{
+    VC_PLAINTEXT = 0,
+    VC_ENCRYPTED = 1,
+    VC_AUTH      = 2
+} VCEnum;
 
 /*
 ** Local Structure Declarations
@@ -82,7 +88,8 @@ typedef struct
 {
     TM_SDLP_GlobalConfig_t mcConfig;
     uint8                  mcFrameCnt;
-    TO_CustomVChnl_t       vc;
+    uint8                  vcInUse;
+    TO_CustomVChnl_t       vc[TO_CUSTOM_NUM_CHNL];
 } TO_CustomMChnl_t;
 
 typedef struct
@@ -134,6 +141,7 @@ static void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg);
 static int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId);
 static TO_CustomPChnl_t * TO_CustomGetChnl(uint16 usRouteId);
 static int32 TO_CustomProcessSizeSent(int32, int32, uint16);
+static void TO_SetCurrentVirtualChannelCmd(CFE_MSG_Message_t *pCmdMsg);
 
 /*******************************************************************************
 ** Custom Application Functions
@@ -177,29 +185,35 @@ int32 TO_CustomInit(void)
     /* Set channel config table */
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
-        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        // {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
         {4, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        // {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
-    CFE_PSP_MemCpy((void* )&pChnl->mc.vc.vcConfig, (void* )&chnlConfig[0],
-                   sizeof(TM_SDLP_ChannelConfig_t));
 
-    if (TM_SDLP_InitChannel(&pChnl->mc.vc.frameInfo,
-                            &pChnl->buffer[TM_SYNC_ASM_SIZE],
-                            &pChnl->mc.vc.ofBuff[0],
-                            &pChnl->mc.mcConfig,
-                            &pChnl->mc.vc.vcConfig) < 0)
+    for (int i = TO_CUSTOM_NUM_CHNL - 1; i >= 0; i--)
     {
-        iStatus = TO_ERROR;
-        goto end_of_function;
+        CFE_PSP_MemCpy(&pChnl->mc.vc[i].vcConfig, &chnlConfig[i],
+                    sizeof(TM_SDLP_ChannelConfig_t));
+
+        if (TM_SDLP_InitChannel(&pChnl->mc.vc[i].frameInfo,
+                                &pChnl->buffer[TM_SYNC_ASM_SIZE],
+                                &pChnl->mc.vc[i].ofBuff[0],
+                                &pChnl->mc.mcConfig,
+                                &pChnl->mc.vc[i].vcConfig) < 0)
+        {
+            iStatus = TO_ERROR;
+            goto end_of_function;
+        }
     }
 
     /* Route 0: Udp */
     g_TO_AppData.routes[0].usExists = 1;
     /* Tie route 0 to CF channel 0 */
     g_TO_AppData.routes[0].sCfChnlIdx = 0;
+    /* Use VC 0*/
+    pChnl->mc.vcInUse = VC_PLAINTEXT;
 
 end_of_function:
     return iStatus;
@@ -221,6 +235,10 @@ int32 TO_CustomAppCmds(CFE_MSG_Message_t* pMsg)
 
         case TO_SET_OCF_DATA_CC:
             TO_CustomSetOcfCmd(pMsg);
+            break;
+
+        case TO_SET_VCID_CC:
+            TO_SetCurrentVirtualChannelCmd(pMsg);
             break;
 
         default:
@@ -259,7 +277,7 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
         goto end_of_function;
     }
     /* Start Frame */
-    pFrameInfo = &pChnl->mc.vc.frameInfo;
+    pFrameInfo = &pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo;
     if (pFrameInfo->isReady)
     {
         goto end_of_function;
@@ -294,9 +312,9 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         goto end_of_function;
     }
     /* Set Pointers */
-    pFrameInfo = &pChnl->mc.vc.frameInfo;
+    pFrameInfo = &pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo;
     pMcFrameCnt = &pChnl->mc.mcFrameCnt;
-    pOcf = &pChnl->mc.vc.ocfBuff[0];
+    pOcf = &pChnl->mc.vc[pChnl->mc.vcInUse].ocfBuff[0];
 
     /* Check if there is packets, otherwise, fill with OID. */
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
@@ -310,12 +328,11 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
     else
     {
-        goto end_of_function;
-// #ifdef TM_DEBUG
-//         printf(KYEL "Setting OID frame!\n" RESET);
-// #endif
-//         // Set frame as Only Idle Data (OID)
-//         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
+#ifdef TM_DEBUG
+        printf(KYEL "Setting OID frame!\n" RESET);
+#endif
+        // Set frame as Only Idle Data (OID)
+        iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
     if (iStatus != TO_SUCCESS)
     {
@@ -393,13 +410,13 @@ int32 TO_CustomProcessPacket(CFE_MSG_Message_t *pMsg, uint16 usRouteId)
         goto end_of_function;
     }
 
-    pFrameInfo = &pChnl->mc.vc.frameInfo;
+    pFrameInfo = &pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo;
 
     /* Add Packet */
     iStatus = TM_SDLP_AddPacket(pFrameInfo, pMsg);
-    if (iStatus >= 0)
+    if (iStatus < 0)
     {
-        iStatus = TO_SUCCESS;
+        iStatus = TO_ERROR;
     }
 
 end_of_function:
@@ -416,6 +433,10 @@ TO_CustomPChnl_t* TO_CustomGetChnl(uint16 usRouteId)
     if (usRouteId == 0)
     {
         pChnl = &g_TO_CustomData.socket.pc;
+    }
+    else
+    {
+        OS_printf("failed to get channel\n");
     }
 
     return pChnl;
@@ -476,13 +497,14 @@ void TO_CustomCleanup(void)
 void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     TO_CustomSetOcfCmd_t* cmd = (TO_CustomSetOcfCmd_t* )pCmdMsg;
+    TO_CustomPChnl_t* pChnl = &g_TO_CustomData.socket.pc;
 
     if (TO_VerifyCmdLength(pCmdMsg, sizeof(TO_CustomSetOcfCmd_t)))
     {
         switch (COP1_GetClcwVcId(&cmd->clcw))
         {
         case 0:
-            CFE_PSP_MemCpy(&g_TO_CustomData.socket.pc.mc.vc.ocfBuff[0],
+            CFE_PSP_MemCpy(&pChnl->mc.vc[pChnl->mc.vcInUse].ocfBuff[0],
                            &cmd->clcw, 4);
             break;
 
@@ -571,6 +593,34 @@ int32 TO_CustomDisableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 /*******************************************************************************
 ** Non standard custom Commands
 *******************************************************************************/
+
+void TO_SetCurrentVirtualChannelCmd(CFE_MSG_Message_t *pCmdMsg)
+{
+    TO_CustomSetVCIDCmd_t* cmd = (TO_CustomSetVCIDCmd_t* )pCmdMsg;
+    TO_CustomPChnl_t* pChnl = &g_TO_CustomData.socket.pc;
+
+    if (TO_VerifyCmdLength(pCmdMsg, sizeof(TO_CustomSetVCIDCmd_t)))
+    {
+        if (0)
+        {
+            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
+                        "Received invalid Virtual Channel ID in TO_SET_VCID_CC");
+        }
+        else
+        {
+            CFE_PSP_MemCpy(&pChnl->mc.vcInUse,
+                    &cmd->vcid, 1);
+            pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo.isReady = false;
+            // TM_SDLP_InitChannel(&pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo,
+            //                     &pChnl->buffer[TM_SYNC_ASM_SIZE],
+            //                     &pChnl->mc.vc[pChnl->mc.vcInUse].ofBuff[0],
+            //                     &pChnl->mc.mcConfig,
+            //                     &pChnl->mc.vc[pChnl->mc.vcInUse].vcConfig);
+            CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
+                          "TM VC Changed to %d", pChnl->mc.vcInUse);
+        }
+    }
+}
 
 /*==============================================================================
 ** End of file to_custom.c

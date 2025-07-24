@@ -68,6 +68,13 @@ typedef struct
 } TO_CustomSetOcfCmd_t;
 
 
+typedef struct
+{
+    CFE_MSG_CommandHeader_t	ucCmdHeader;
+    uint8     vcid; 
+} TO_CustomSetVCIDCmd_t;
+
+
 /*************** Telemetry **************/
 typedef struct
 {
