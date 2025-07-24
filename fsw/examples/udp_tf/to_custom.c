@@ -185,9 +185,9 @@ int32 TO_CustomInit(void)
     /* Set channel config table */
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
-        // {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
         {4, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        // {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
@@ -598,24 +598,35 @@ void TO_SetCurrentVirtualChannelCmd(CFE_MSG_Message_t *pCmdMsg)
 {
     TO_CustomSetVCIDCmd_t* cmd = (TO_CustomSetVCIDCmd_t* )pCmdMsg;
     TO_CustomPChnl_t* pChnl = &g_TO_CustomData.socket.pc;
+    uint8 prevVC = 0;
 
     if (TO_VerifyCmdLength(pCmdMsg, sizeof(TO_CustomSetVCIDCmd_t)))
     {
-        if (0)
+        if (cmd->vcid >= TO_CUSTOM_NUM_CHNL || cmd->vcid < 0)
         {
             CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
                         "Received invalid Virtual Channel ID in TO_SET_VCID_CC");
         }
         else
         {
-            CFE_PSP_MemCpy(&pChnl->mc.vcInUse,
-                    &cmd->vcid, 1);
-            pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo.isReady = false;
-            // TM_SDLP_InitChannel(&pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo,
-            //                     &pChnl->buffer[TM_SYNC_ASM_SIZE],
-            //                     &pChnl->mc.vc[pChnl->mc.vcInUse].ofBuff[0],
-            //                     &pChnl->mc.mcConfig,
-            //                     &pChnl->mc.vc[pChnl->mc.vcInUse].vcConfig);
+            // Get previous VC and take mutex
+            prevVC = pChnl->mc.vcInUse;
+            OS_MutSemTake(pChnl->mc.vc[prevVC].frameInfo.mutexId);
+
+            // Copy in command input
+            CFE_PSP_MemCpy(&pChnl->mc.vcInUse, &cmd->vcid, 1);
+
+            // Re-init new channel 
+            TM_SDLP_InitChannel(&pChnl->mc.vc[pChnl->mc.vcInUse].frameInfo,
+                                &pChnl->buffer[TM_SYNC_ASM_SIZE],
+                                &pChnl->mc.vc[pChnl->mc.vcInUse].ofBuff[0],
+                                &pChnl->mc.mcConfig,
+                                &pChnl->mc.vc[pChnl->mc.vcInUse].vcConfig);
+            
+            // Give back mutex
+            OS_MutSemGive(pChnl->mc.vc[prevVC].frameInfo.mutexId);
+
+            // Send msg to fsw terminal
             CFE_EVS_SendEvent(TO_CUSTOM_INF_EID, CFE_EVS_EventType_INFORMATION, 
                           "TM VC Changed to %d", pChnl->mc.vcInUse);
         }
