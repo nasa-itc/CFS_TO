@@ -53,6 +53,16 @@
 #include "ci_msgids.h"
 #include "to_mission_cfg.h"
 
+/* Start additional includes for hostname snippet */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+/* End additional includes for hostname snippet */
+
 /*
 ** Local Defines
 */
@@ -168,7 +178,8 @@ int32 TO_CustomInit(void)
     TM_SDLP_ChannelConfig_t chnlConfig[TO_CUSTOM_NUM_CHNL] =
     {
         {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
-        {1, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
+        {4, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE},
+        {5, 0, 0, 0, 0, 0, TO_CUSTOM_TF_OVERFLOW_SIZE}
     };
 
     pChnl = &g_TO_CustomData.socket.pc;
@@ -249,6 +260,10 @@ int32 TO_CustomFrameStart(uint16 usRouteId)
     }
     /* Start Frame */
     pFrameInfo = &pChnl->mc.vc.frameInfo;
+    if (pFrameInfo->isReady)
+    {
+        goto end_of_function;
+    }
     iStatus = TM_SDLP_StartFrame(pFrameInfo);
 
 end_of_function:
@@ -269,8 +284,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     uint8* pMcFrameCnt = NULL;
     uint8* pOcf = NULL;
 
-    SecurityAssociation_t* sa_ptr = NULL;
-
     pChnl = TO_CustomGetChnl(usRouteId);
     if (!pChnl)
     {
@@ -286,7 +299,6 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     pOcf = &pChnl->mc.vc.ocfBuff[0];
 
     /* Check if there is packets, otherwise, fill with OID. */
-    /* -- Comment out idle packets until crash resolved
     iStatus = TM_SDLP_FrameHasData(pFrameInfo);
     if (iStatus == 1)
     {
@@ -296,19 +308,19 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
         // Add an idle packet to fill remaining free space
         iStatus = TM_SDLP_AddIdlePacket(pFrameInfo, pIdlePacket);
     }
-    else if (iStatus == 0)
+    else
     {
-#ifdef TM_DEBUG
-        printf(KYEL "Setting OID frame!\n" RESET);
-#endif
-        // Set frame as Only Idle Data (OID)
-        iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
+        goto end_of_function;
+// #ifdef TM_DEBUG
+//         printf(KYEL "Setting OID frame!\n" RESET);
+// #endif
+//         // Set frame as Only Idle Data (OID)
+//         iStatus = TM_SDLP_SetOidFrame(pFrameInfo, pIdlePacket);
     }
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
     }
-    */
     
     /* Complete Frame */
     iStatus = TM_SDLP_CompleteFrame(pFrameInfo, pMcFrameCnt, pOcf);
@@ -318,7 +330,7 @@ int32 TO_CustomFrameSend(uint16 usRouteId, int32 iInStatus)
     }
 
     /* Perform SDLS */
-    iStatus = Crypto_TM_ApplySecurity(pFrameInfo->frame);
+    iStatus = Crypto_TM_ApplySecurity((uint8_t*)pFrameInfo->frame, 1786);
     if (iStatus != TO_SUCCESS)
     {
         goto end_of_function;
@@ -474,9 +486,9 @@ void TO_CustomSetOcfCmd(CFE_MSG_Message_t *pCmdMsg)
                            &cmd->clcw, 4);
             break;
 
-            default:
-                CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
-                          "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
+        default:
+            CFE_EVS_SendEvent(TO_CUSTOM_ERR_EID, CFE_EVS_EventType_ERROR,
+                      "Received invalid Channel ID in TO_SET_OCF_DATA_CC");
         }
     }
 }
@@ -493,6 +505,31 @@ int32 TO_CustomEnableOutputCmd(CFE_MSG_Message_t *pCmdMsg)
 
     TO_EnableOutputCmd_t* pCustomCmd = (TO_EnableOutputCmd_t*)pCmdMsg;
     strncpy(cDestIp, pCustomCmd->cDestIp, sizeof(cDestIp));
+
+    struct addrinfo hints, *res, *p;
+    int status;
+    void *addr;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // Use AF_UNSPEC for IPv6 support
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((status = getaddrinfo(pCustomCmd->cDestIp, NULL, &hints, &res)) == 0)
+    {
+        // Loop through results and get the first valid IP
+        for (p = res; p != NULL; p = p->ai_next)
+        {
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+            addr = &(ipv4->sin_addr);
+
+            // Convert to string and store it
+            if (inet_ntop(p->ai_family, addr, pCustomCmd->cDestIp, INET_ADDRSTRLEN) != NULL)
+            {
+                break;
+            }
+        }
+        freeaddrinfo(res);
+    }
 
     if (pCustomCmd->usDestPort > 0)
     {
