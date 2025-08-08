@@ -58,7 +58,7 @@ extern "C" {
 #define TO_CUSTOM_TF_IDLE_SIZE TO_CUSTOM_TF_SIZE
 
 #define TO_CUSTOM_NUM_CHNL      3
-#define TO_CUSTOM_TF_SCID       0
+#define TO_CUSTOM_TF_SCID       3
 #define TO_CUSTOM_TF_ERR_CTRL   0
 #define TO_CUSTOM_TF_RANDOMIZE  0
 
