@@ -38,7 +38,7 @@ extern "C" {
 
 #define TO_NUM_CRITICAL_MIDS   3
 
-#define TO_MAX_TBL_ENTRIES    100
+#define TO_MAX_TBL_ENTRIES    110
 #define TO_WAKEUP_TIMEOUT     500
 
 #define TO_CONFIG_TABLENAME "to_config"
