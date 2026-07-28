@@ -37,7 +37,7 @@ extern "C" {
 #define TO_NUM_CRITICAL_MIDS     3
 #define TO_DEFAULT_DEST_PORT     5011 
 #define TO_WAKEUP_TIMEOUT        50
-
+#define TO_MAX_TBL_ENTRIES        110
 #define TO_SCH_PIPE_DEPTH  32
 #define TO_CMD_PIPE_DEPTH  32
 #define TO_TLM_PIPE_DEPTH  32
